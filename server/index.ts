@@ -600,7 +600,7 @@ function parseClientOrigins(value?: string) {
 
   return value
     .split(",")
-    .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 }
 
@@ -613,7 +613,11 @@ function isAllowedOrigin(origin?: string) {
     return true;
   }
 
-  return CLIENT_ORIGINS.includes(origin);
+  return CLIENT_ORIGINS.includes(normalizeOrigin(origin));
+}
+
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/+$/, "");
 }
 
 setInterval(updatePlayingRooms, 1000 / 30);
