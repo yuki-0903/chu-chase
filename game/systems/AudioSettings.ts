@@ -3,7 +3,7 @@ export interface AudioSettings {
   seEnabled: boolean;
 }
 
-const STORAGE_KEY = "phaser-next-template-audio";
+const STORAGE_KEY = "chu-chase-audio";
 const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   bgmEnabled: true,
   seEnabled: true

@@ -1,11 +1,14 @@
 {
-  "name": "phaser-next-template",
+  "name": "chu-chase",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:client": "next dev",
+    "dev:server": "tsx watch server/index.ts",
     "build": "next build",
     "start": "next start",
+    "start:server": "tsx server/index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -13,14 +16,20 @@
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.184.1",
+    "express": "^5.2.1",
     "next": "^14.2.5",
-    "phaser": "^3.80.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "three": "^0.184.0",
     "typescript": "^5.5.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.5"
+    "eslint-config-next": "^14.2.5",
+    "tsx": "^4.22.0"
   }
 }

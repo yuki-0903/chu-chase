@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHU CHASE Color Palettes</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f7f8fb;
+        color: #20232b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 28px;
+        background: #f7f8fb;
+      }
+
+      main {
+        display: grid;
+        gap: 22px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+
+      header {
+        display: grid;
+        gap: 8px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      p {
+        color: #666f7f;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.6;
+      }
+
+      .palette-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .palette {
+        display: grid;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid rgb(255 255 255 / 82%);
+        border-radius: 8px;
+        background: var(--page);
+        box-shadow:
+          14px 14px 30px var(--shadow),
+          -14px -14px 30px rgb(255 255 255 / 88%);
+      }
+
+      .palette h2 {
+        font-size: 20px;
+        line-height: 1.1;
+      }
+
+      .preview {
+        position: relative;
+        overflow: hidden;
+        min-height: 220px;
+        border-radius: 8px;
+        background: var(--background);
+        box-shadow:
+          inset 8px 8px 18px var(--shadow-soft),
+          inset -8px -8px 18px rgb(255 255 255 / 82%);
+      }
+
+      .stage {
+        position: absolute;
+        left: 50%;
+        bottom: -58px;
+        width: 290px;
+        height: 190px;
+        border-radius: 50%;
+        background: var(--floor);
+        box-shadow:
+          12px 14px 24px var(--shadow),
+          -8px -8px 18px rgb(255 255 255 / 78%);
+        transform: translateX(-50%);
+      }
+
+      .marker {
+        position: absolute;
+        width: 44px;
+        height: 18px;
+        border-radius: 5px;
+        background: var(--marker);
+        box-shadow: 5px 6px 10px var(--shadow-soft);
+        transform: rotate(-8deg);
+      }
+
+      .marker:nth-child(2) {
+        left: 48px;
+        top: 106px;
+      }
+
+      .marker:nth-child(3) {
+        right: 48px;
+        top: 62px;
+        background: var(--marker-alt);
+        transform: rotate(12deg);
+      }
+
+      .bean {
+        position: absolute;
+        left: 50%;
+        top: 98px;
+        width: 54px;
+        height: 76px;
+        border-radius: 48% 52% 45% 55% / 55% 55% 44% 44%;
+        background: var(--bean);
+        box-shadow:
+          10px 12px 16px var(--shadow),
+          inset -7px -7px 12px rgb(210 217 228 / 38%),
+          inset 8px 8px 14px rgb(255 255 255 / 86%);
+        transform: translateX(-50%);
+      }
+
+      .eye {
+        position: absolute;
+        top: 30px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #20232b;
+      }
+
+      .eye.left {
+        left: 17px;
+      }
+
+      .eye.right {
+        right: 17px;
+      }
+
+      .lips {
+        position: absolute;
+        left: 50%;
+        top: 43px;
+        width: 28px;
+        height: 13px;
+        border-radius: 999px;
+        background: var(--lip);
+        box-shadow:
+          inset 2px 2px 4px rgb(255 255 255 / 36%),
+          2px 3px 6px rgb(120 20 50 / 20%);
+        transform: translateX(-50%);
+      }
+
+      .sticker {
+        position: absolute;
+        left: 18px;
+        top: 18px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--ui);
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 900;
+        box-shadow:
+          7px 7px 14px var(--shadow),
+          -7px -7px 14px rgb(255 255 255 / 80%);
+      }
+
+      .swatches {
+        display: grid;
+        gap: 8px;
+      }
+
+      .swatch {
+        display: grid;
+        grid-template-columns: 36px 1fr auto;
+        align-items: center;
+        gap: 9px;
+        min-height: 34px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .chip {
+        width: 36px;
+        height: 26px;
+        border: 1px solid rgb(0 0 0 / 8%);
+        border-radius: 6px;
+        background: var(--chip);
+      }
+
+      .hex {
+        color: #737b88;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
+
+      .note {
+        min-height: 72px;
+      }
+
+      .a {
+        --page: #f7f8fb;
+        --background: #f7f8fb;
+        --floor: #ffffff;
+        --ui: #f7f8fb;
+        --bean: #f1f2f5;
+        --lip: #ff244f;
+        --marker: #dff7ff;
+        --marker-alt: #ffdff2;
+        --text: #20232b;
+        --shadow: rgb(188 196 210 / 36%);
+        --shadow-soft: rgb(188 196 210 / 22%);
+      }
+
+      .b {
+        --page: #fafaf7;
+        --background: #fbfbf7;
+        --floor: #ffffff;
+        --ui: #fffdf8;
+        --bean: #f2f1ee;
+        --lip: #ff416d;
+        --marker: #ddf7ee;
+        --marker-alt: #fff0ad;
+        --text: #2b2924;
+        --shadow: rgb(194 190 176 / 30%);
+        --shadow-soft: rgb(194 190 176 / 18%);
+      }
+
+      .c {
+        --page: #f5f5f5;
+        --background: #f5f5f5;
+        --floor: #ffffff;
+        --ui: #ffffff;
+        --bean: #eeeeee;
+        --lip: #ff124f;
+        --marker: #25d7ff;
+        --marker-alt: #ff2f98;
+        --text: #111111;
+        --shadow: rgb(120 130 145 / 34%);
+        --shadow-soft: rgb(120 130 145 / 20%);
+      }
+
+      @media (max-width: 920px) {
+        body {
+          padding: 18px;
+        }
+
+        .palette-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>CHU CHASE Color Palettes</h1>
+        <p>白いニューモーフィズム空間で、赤い唇とミーム感が映えるかを見るための配色案。</p>
+      </header>
+
+      <section class="palette-grid" aria-label="Color palette proposals">
+        <article class="palette a">
+          <h2>A. Neumorphism White</h2>
+          <div class="preview">
+            <div class="sticker">BUCHU!!</div>
+            <div class="marker"></div>
+            <div class="marker"></div>
+            <div class="stage"></div>
+            <div class="bean">
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="lips"></div>
+            </div>
+          </div>
+          <div class="swatches">
+            <div class="swatch"><span class="chip" style="--chip:#f7f8fb"></span>Background <span class="hex">#F7F8FB</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ffffff"></span>Floor <span class="hex">#FFFFFF</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#f1f2f5"></span>Bean <span class="hex">#F1F2F5</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ff244f"></span>Lip <span class="hex">#FF244F</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#58d8ff"></span>Runner Accent <span class="hex">#58D8FF</span></div>
+          </div>
+          <p class="note">今の方向に一番近い。キャラや唇を邪魔しにくく、実装にも乗せやすい。</p>
+        </article>
+
+        <article class="palette b">
+          <h2>B. Korean Pastel Shop</h2>
+          <div class="preview">
+            <div class="sticker">!?</div>
+            <div class="marker"></div>
+            <div class="marker"></div>
+            <div class="stage"></div>
+            <div class="bean">
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="lips"></div>
+            </div>
+          </div>
+          <div class="swatches">
+            <div class="swatch"><span class="chip" style="--chip:#fafaf7"></span>Background <span class="hex">#FAFAF7</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#fffdf8"></span>UI <span class="hex">#FFFDF8</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#f2f1ee"></span>Bean <span class="hex">#F2F1EE</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ff416d"></span>Lip <span class="hex">#FF416D</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ddf7ee"></span>Marker <span class="hex">#DDF7EE</span></div>
+          </div>
+          <p class="note">柔らかくて雑貨っぽい。かわいい側に寄りやすいので、演出で変さを強めたい。</p>
+        </article>
+
+        <article class="palette c">
+          <h2>C. White Meme Studio</h2>
+          <div class="preview">
+            <div class="sticker">骨バキッ!</div>
+            <div class="marker"></div>
+            <div class="marker"></div>
+            <div class="stage"></div>
+            <div class="bean">
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="lips"></div>
+            </div>
+          </div>
+          <div class="swatches">
+            <div class="swatch"><span class="chip" style="--chip:#f5f5f5"></span>Background <span class="hex">#F5F5F5</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ffffff"></span>UI / Floor <span class="hex">#FFFFFF</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#eeeeee"></span>Bean <span class="hex">#EEEEEE</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ff124f"></span>Lip <span class="hex">#FF124F</span></div>
+            <div class="swatch"><span class="chip" style="--chip:#ff2f98"></span>Meme Pink <span class="hex">#FF2F98</span></div>
+          </div>
+          <p class="note">サムネ映えしやすい。赤と黒が強いので、通常時は抑えて捕獲時に使うと良さそう。</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHU CHASE Playtest Checklist</title>
+    <style>
+      :root {
+        color-scheme: light;
+        background: #f7f8fb;
+        color: #20232b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f7f8fb;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      .card {
+        padding: 18px;
+        border: 1px solid rgb(255 255 255 / 80%);
+        border-radius: 8px;
+        background: #f7f8fb;
+        box-shadow:
+          10px 10px 24px rgb(188 196 210 / 42%),
+          -10px -10px 24px rgb(255 255 255 / 92%);
+      }
+
+      .links {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 18px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      a {
+        color: #20232b;
+      }
+
+      label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        min-height: 42px;
+        padding: 8px 0;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      input {
+        width: 22px;
+        height: 22px;
+        accent-color: #ff8cc8;
+        flex: 0 0 auto;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 96px;
+        margin-top: 16px;
+        padding: 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #20232b;
+        resize: vertical;
+        box-shadow:
+          inset 6px 6px 14px rgb(188 196 210 / 28%),
+          inset -6px -6px 14px rgb(255 255 255 / 90%);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Playtest</h1>
+      <section class="card">
+        <div class="links">
+          <div>PC: <a href="http://localhost:3001">http://localhost:3001</a></div>
+          <div>Smartphone: <a href="http://192.168.1.6:3001">http://192.168.1.6:3001</a></div>
+        </div>
+
+        <label><input type="checkbox" /> 最初は部屋作成/join画面だけが出る</label>
+        <label><input type="checkbox" /> スマホ縦持ちでもルーム作成画面が横向きに見える</label>
+        <label><input type="checkbox" /> PCで CREATE ROOM を押すとroom codeが出る</label>
+        <label><input type="checkbox" /> room code入力で文字が二重表示されない</label>
+        <label><input type="checkbox" /> room code入力中に入力不能にならない</label>
+        <label><input type="checkbox" /> スマホで同じroom codeを入力して JOIN できる</label>
+        <label><input type="checkbox" /> 2人揃うとゲーム画面の READY に移る</label>
+        <label><input type="checkbox" /> 各画面に CHUSER / DODGER のどちらかが表示される</label>
+        <label><input type="checkbox" /> 2人の役割が同じにならない</label>
+        <label><input type="checkbox" /> タップしても各自で勝手にゲーム開始しない</label>
+        <label><input type="checkbox" /> START READY を押すと READY 1/2 になる</label>
+        <label><input type="checkbox" /> 2人とも START READY を押すとゲーム開始する</label>
+        <label><input type="checkbox" /> 開始後に TIME が表示されて動ける</label>
+        <label><input type="checkbox" /> 右上に 5 / 4 / 3 / 2 / 1 のカウントが出る</label>
+        <label><input type="checkbox" /> DODGER役には ESCAPE!! が小さく表示される</label>
+        <label><input type="checkbox" /> CHUSER役には HOLD YOUR CHU... が小さく表示される</label>
+        <label><input type="checkbox" /> CHUSERが透明カプセルに閉じ込められている</label>
+        <label><input type="checkbox" /> 5秒後に表示が CHASE! へ切り替わる</label>
+        <label><input type="checkbox" /> 開始後5秒間は逃げ役だけ動ける</label>
+        <label><input type="checkbox" /> PCで動くとスマホ側にも位置が反映される</label>
+        <label><input type="checkbox" /> スマホで動くとPC側にも位置が反映される</label>
+        <label><input type="checkbox" /> 相手キャラが画面内で見える</label>
+        <label><input type="checkbox" /> 移動中、自分のキャラが画面中心付近にいる</label>
+        <label><input type="checkbox" /> 逃げられる範囲が広くなっている</label>
+        <label><input type="checkbox" /> 鬼が逃げ役に触れると試合が終了する</label>
+        <label><input type="checkbox" /> 捕獲時にカメラが寄る/揺れる</label>
+        <label><input type="checkbox" /> 捕獲時に BUCHU!! と !? が目立つ</label>
+        <label><input type="checkbox" /> 終了後に YOU WIN! / YOU LOSE! が表示される</label>
+        <label><input type="checkbox" /> スマホ縦持ちの終了後テキストは横向き表示になる</label>
+        <label><input type="checkbox" /> 終了後に REMATCH READY が表示される</label>
+        <label><input type="checkbox" /> スマホ縦持ちの REMATCH READY まわりも横向き表示になる</label>
+        <label><input type="checkbox" /> 2人とも REMATCH READY を押すと再スタートする</label>
+        <label><input type="checkbox" /> スマホ縦持ちで横画面として自然に見える</label>
+        <label><input type="checkbox" /> PC横幅768px以下でプレイ不可表示になる</label>
+        <label><input type="checkbox" /> 見た目が大きく崩れていない</label>
+
+        <textarea placeholder="メモ"></textarea>
+      </section>
+    </main>
+  </body>
+</html>

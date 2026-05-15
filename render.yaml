@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: chu-chase-socket
+    env: node
+    plan: free
+    buildCommand: npm install --include=dev
+    startCommand: npm run start:server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: CLIENT_ORIGIN
+        sync: false
