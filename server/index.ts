@@ -50,6 +50,7 @@ interface Room {
   players: RoomPlayer[];
   settings: MatchSettingsPayload;
   createdAt: number;
+  updatedAt: number;
   startedAt?: number;
   endsAt?: number;
   captureCount: number;
@@ -57,9 +58,19 @@ interface Room {
   endReason?: EndReason;
 }
 
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
+
 const PORT = Number(process.env.PORT ?? 3002);
 const CLIENT_ORIGINS = parseClientOrigins(process.env.CLIENT_ORIGIN);
+const MAX_ROOMS = Number(process.env.MAX_ROOMS ?? 300);
+const WAITING_ROOM_TTL_MS = Number(process.env.WAITING_ROOM_TTL_MS ?? 10 * 60 * 1000);
+const ENDED_ROOM_TTL_MS = Number(process.env.ENDED_ROOM_TTL_MS ?? 5 * 60 * 1000);
+const DISCONNECTED_ROOM_TTL_MS = Number(process.env.DISCONNECTED_ROOM_TTL_MS ?? 2 * 60 * 1000);
 const rooms = new Map<RoomCode, Room>();
+const rateLimits = new Map<string, RateLimitBucket>();
 
 const defaultSettings: MatchSettingsPayload = {
   matchDurationMs: MATCH_DURATION_MS,
@@ -98,12 +109,31 @@ app.get("/health", (_request, response) => {
 });
 
 io.on("connection", (socket) => {
+  const clientKey = getClientKey(socket);
+
   socket.emit("server:hello", {
     socketId: socket.id,
     serverTime: Date.now()
   });
 
   socket.on("room:create", (payload, ack) => {
+    if (isRateLimited(`room:create:${clientKey}`, 5, 60_000)) {
+      ack?.(createError("rate-limited", "Please wait before creating another room."));
+      return;
+    }
+
+    cleanupRooms();
+
+    if (rooms.size >= MAX_ROOMS) {
+      ack?.(createError("server-busy", "Server is busy. Please try again later."));
+      return;
+    }
+
+    if (socket.data.roomCode && socket.data.playerId) {
+      ack?.(createError("already-in-room", "You are already in a room."));
+      return;
+    }
+
     const room = createRoom();
     const player = createRoomPlayer(socket.id, payload.nickname);
     room.players.push(player);
@@ -119,9 +149,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("room:join", (payload, ack) => {
+    if (isRateLimited(`room:join:${clientKey}`, 20, 60_000)) {
+      ack?.(createError("rate-limited", "Please wait before joining another room."));
+      return;
+    }
+
     const roomCode = normalizeRoomCode(payload.roomCode);
 
+    if (isRateLimitBlocked(`room:join-fail:${clientKey}`)) {
+      ack?.(createError("rate-limited", "Too many failed room attempts. Please wait."));
+      return;
+    }
+
     if (!isValidRoomCode(roomCode)) {
+      markInvalidJoin(clientKey);
       ack?.(createError("invalid-room-code", "Room code is invalid."));
       return;
     }
@@ -129,6 +170,7 @@ io.on("connection", (socket) => {
     const room = rooms.get(roomCode);
 
     if (!room) {
+      markInvalidJoin(clientKey);
       ack?.(createError("room-not-found", "Room was not found."));
       return;
     }
@@ -145,6 +187,7 @@ io.on("connection", (socket) => {
       socket.data.playerId = reconnectingPlayer.id;
       socket.data.roomCode = room.code;
       socket.join(room.code);
+      touchRoom(room);
       const response = buildRoomPayload(room, reconnectingPlayer.id);
       ack?.(response);
       return;
@@ -166,6 +209,7 @@ io.on("connection", (socket) => {
       room.phase = "ready";
     }
 
+    touchRoom(room);
     const response = buildRoomPayload(room, player.id);
     socket.emit("room:joined", response);
     emitRoomUpdate(room);
@@ -186,6 +230,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("game:ready", () => {
+    if (isRateLimited(`game:ready:${socket.id}`, 10, 10_000)) {
+      socket.emit("server:error", createError("rate-limited", "Please wait before trying ready again."));
+      return;
+    }
+
     const roomCode = socket.data.roomCode;
     const playerId = socket.data.playerId;
 
@@ -218,6 +267,7 @@ io.on("connection", (socket) => {
     }
 
     player.ready = true;
+    touchRoom(room);
     emitRoomUpdate(room);
 
     if (room.players.length === MAX_PLAYERS_PER_ROOM && room.players.every((roomPlayer) => roomPlayer.ready)) {
@@ -229,6 +279,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("input:update", (payload) => {
+    if (isRateLimited(`input:update:${socket.id}`, 45, 1_000)) {
+      return;
+    }
+
     const roomCode = socket.data.roomCode;
     const playerId = socket.data.playerId;
 
@@ -280,12 +334,15 @@ httpServer.listen(PORT, () => {
 });
 
 function createRoom(): Room {
+  const now = Date.now();
+
   return {
     code: createUniqueRoomCode(),
     phase: "waiting",
     players: [],
     settings: { ...defaultSettings },
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
     captureCount: 0
   };
 }
@@ -314,6 +371,8 @@ function buildRoomPayload(room: Room, playerId: PlayerId): RoomJoinedPayload {
 }
 
 function emitRoomUpdate(room: Room) {
+  touchRoom(room);
+
   room.players.forEach((player) => {
     io.to(player.socketId).emit("room:waiting", buildRoomPayload(room, player.id));
   });
@@ -390,6 +449,7 @@ function toPlayerSnapshot(player: RoomPlayer): PlayerSnapshot {
 
 function startRoom(room: Room) {
   const now = Date.now();
+  room.updatedAt = now;
   room.startedAt = now;
   room.endsAt = now + room.settings.matchDurationMs;
   room.captureCount = 0;
@@ -403,6 +463,7 @@ function startRoom(room: Room) {
 
 function prepareRoomForRematch(room: Room) {
   room.phase = "ready";
+  touchRoom(room);
   room.startedAt = undefined;
   room.endsAt = undefined;
   room.captureCount = 0;
@@ -504,6 +565,7 @@ function findCapture(room: Room) {
 
 function endRoom(room: Room, winnerRole: PlayerRole, reason: EndReason) {
   room.phase = "ended";
+  touchRoom(room);
   room.winnerRole = winnerRole;
   room.endReason = reason;
   room.players.forEach((player) => {
@@ -516,7 +578,7 @@ function endRoom(room: Room, winnerRole: PlayerRole, reason: EndReason) {
   emitRoomUpdate(room);
 }
 
-function buildGameEndedPayload(room: Room, winnerRole: PlayerRole, reason: EndReason): GameEndedPayload {
+function buildGameEndedPayload(room: Room, winnerRole: PlayerRole | undefined, reason: EndReason): GameEndedPayload {
   return {
     roomCode: room.code,
     serverTime: Date.now(),
@@ -538,6 +600,83 @@ function keepPlayerInsideArena(position: { x: number; y: number }) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function touchRoom(room: Room) {
+  room.updatedAt = Date.now();
+}
+
+function getClientKey(socket: ServerSocket) {
+  const forwardedFor = socket.handshake.headers["x-forwarded-for"];
+  const forwardedAddress = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+  const firstForwardedAddress = forwardedAddress?.split(",")[0]?.trim();
+  return firstForwardedAddress || socket.handshake.address || socket.id;
+}
+
+function isRateLimited(key: string, limit: number, windowMs: number) {
+  const now = Date.now();
+  const current = rateLimits.get(key);
+
+  if (!current || current.resetAt <= now) {
+    rateLimits.set(key, {
+      count: 1,
+      resetAt: now + windowMs
+    });
+    return false;
+  }
+
+  current.count += 1;
+  return current.count > limit;
+}
+
+function isRateLimitBlocked(key: string) {
+  const current = rateLimits.get(key);
+  return Boolean(current && current.resetAt > Date.now() && current.count > 8);
+}
+
+function markInvalidJoin(clientKey: string) {
+  isRateLimited(`room:join-fail:${clientKey}`, 8, 60_000);
+}
+
+function cleanupRateLimits() {
+  const now = Date.now();
+
+  rateLimits.forEach((bucket, key) => {
+    if (bucket.resetAt <= now) {
+      rateLimits.delete(key);
+    }
+  });
+}
+
+function cleanupRooms() {
+  const now = Date.now();
+
+  rooms.forEach((room) => {
+    const ageMs = now - room.createdAt;
+    const idleMs = now - room.updatedAt;
+    const hasConnectedPlayer = room.players.some((player) => player.connected);
+
+    if (!hasConnectedPlayer && idleMs >= DISCONNECTED_ROOM_TTL_MS) {
+      rooms.delete(room.code);
+      return;
+    }
+
+    if ((room.phase === "waiting" || room.phase === "ready") && ageMs >= WAITING_ROOM_TTL_MS) {
+      closeRoom(room, "room-closed");
+      rooms.delete(room.code);
+      return;
+    }
+
+    if (room.phase === "ended" && idleMs >= ENDED_ROOM_TTL_MS) {
+      rooms.delete(room.code);
+    }
+  });
+}
+
+function closeRoom(room: Room, reason: EndReason) {
+  room.players.forEach((player) => {
+    io.to(player.socketId).emit("game:ended", buildGameEndedPayload(room, undefined, reason));
+  });
 }
 
 function assignRoles(room: Room) {
@@ -621,3 +760,5 @@ function normalizeOrigin(origin: string) {
 }
 
 setInterval(updatePlayingRooms, 1000 / 30);
+setInterval(cleanupRooms, 30_000);
+setInterval(cleanupRateLimits, 60_000);

@@ -104,6 +104,9 @@ export interface ServerErrorPayload {
     | "room-already-started"
     | "invalid-room-code"
     | "not-in-room"
+    | "already-in-room"
+    | "rate-limited"
+    | "server-busy"
     | "server-error";
   message: string;
 }
