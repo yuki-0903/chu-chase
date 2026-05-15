@@ -57,6 +57,25 @@ Keep the setting generic so UI can change later.
 
 Use `AudioSettings.ts` for persistent settings.
 
-Use Phaser sound only after the game is running in the browser.
+Current implementation uses browser audio helpers.
+
+Relevant files:
+
+```txt
+game/systems/AudioSettings.ts
+game/systems/Bgm.ts
+game/systems/Sfx.ts
+components/BgmPlayer.tsx
+components/AudioToggle.tsx
+components/ButtonSfx.tsx
+```
+
+Current behavior:
+
+- BGM is preloaded, but not autoplayed.
+- BGM starts after user intent such as join / ready / restart / BGM toggle.
+- BGM does not start from `CREATE ROOM`.
+- BGM and SE can be toggled from the bottom-right UI.
+- Button clicks share one common SE.
 
 When replacing audio assets, keep the load key stable when possible and change only the file path.

@@ -1,8 +1,15 @@
+import { AUDIO_ASSET_BASE } from "@/game/config/assets";
 import { loadAudioSettings } from "@/game/systems/AudioSettings";
 
 type OscillatorKind = OscillatorType;
 
 let audioContext: AudioContext | null = null;
+let kissCaptureAudio: HTMLAudioElement | null = null;
+let kissCaptureBuffer: AudioBuffer | null = null;
+let kissCaptureBufferPromise: Promise<AudioBuffer | null> | null = null;
+
+const KISS_CAPTURE_URL = `${AUDIO_ASSET_BASE}/buchu.mp3`;
+const KISS_CAPTURE_VOLUME = 0.82;
 
 function getAudioContext() {
   if (typeof window === "undefined" || !loadAudioSettings().seEnabled) {
@@ -27,6 +34,95 @@ function createMasterGain(context: AudioContext, volume: number) {
   gain.gain.setValueAtTime(Math.max(0.0001, volume), context.currentTime);
   gain.connect(context.destination);
   return gain;
+}
+
+function getKissCaptureAudio() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  kissCaptureAudio ??= createKissCaptureAudio();
+  return kissCaptureAudio;
+}
+
+function createKissCaptureAudio() {
+  const audio = new Audio(KISS_CAPTURE_URL);
+  audio.preload = "auto";
+  audio.volume = KISS_CAPTURE_VOLUME;
+  return audio;
+}
+
+async function loadKissCaptureBuffer(context: AudioContext) {
+  if (kissCaptureBuffer) {
+    return kissCaptureBuffer;
+  }
+
+  kissCaptureBufferPromise ??= fetch(KISS_CAPTURE_URL)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load kiss capture sound: ${response.status}`);
+      }
+
+      return response.arrayBuffer();
+    })
+    .then((arrayBuffer) => context.decodeAudioData(arrayBuffer.slice(0)))
+    .then((buffer) => {
+      kissCaptureBuffer = buffer;
+      return buffer;
+    })
+    .catch(() => null);
+
+  return kissCaptureBufferPromise;
+}
+
+function playKissCaptureBuffer() {
+  const context = getAudioContext();
+  if (!context) {
+    return false;
+  }
+
+  if (!kissCaptureBuffer) {
+    void loadKissCaptureBuffer(context);
+    return false;
+  }
+
+  const source = context.createBufferSource();
+  const gain = createMasterGain(context, KISS_CAPTURE_VOLUME);
+  source.buffer = kissCaptureBuffer;
+  source.connect(gain);
+  source.start();
+  return true;
+}
+
+function playKissCaptureAudioElement() {
+  if (!loadAudioSettings().seEnabled) {
+    return false;
+  }
+
+  const audio = getKissCaptureAudio();
+  if (!audio) {
+    return false;
+  }
+
+  audio.pause();
+  audio.currentTime = 0;
+  void audio.play().catch(() => {
+    playSynthKissCaptureSfx();
+  });
+  return true;
+}
+
+export function preloadSfx() {
+  getKissCaptureAudio()?.load();
+}
+
+export function unlockSfx() {
+  const context = getAudioContext();
+  if (context) {
+    void loadKissCaptureBuffer(context);
+  }
+
+  getKissCaptureAudio()?.load();
 }
 
 function playTone({
@@ -149,11 +245,17 @@ export function playChuserReleaseSfx() {
   playTone({ duration: 0.16, endFrequency: 1120, frequency: 690, startOffset: 0.06, type: "sine", volume: 0.04 });
 }
 
-export function playKissCaptureSfx() {
+function playSynthKissCaptureSfx() {
   playTone({ duration: 0.18, endFrequency: 120, frequency: 96, type: "sawtooth", volume: 0.06 });
   playTone({ duration: 0.22, endFrequency: 420, frequency: 210, startOffset: 0.04, type: "triangle", volume: 0.075 });
   playNoise({ duration: 0.18, highpass: 420, startOffset: 0.02, volume: 0.04 });
   playTone({ duration: 0.12, endFrequency: 880, frequency: 520, startOffset: 0.14, type: "sine", volume: 0.04 });
+}
+
+export function playKissCaptureSfx() {
+  if (!playKissCaptureBuffer() && !playKissCaptureAudioElement()) {
+    playSynthKissCaptureSfx();
+  }
 }
 
 export function playTimeWarningTickSfx() {

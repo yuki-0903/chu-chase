@@ -36,7 +36,7 @@ feature/#12
 6. Let the user confirm in the browser.
 7. After user approval, commit.
 8. Merge or push as requested.
-9. Deploy to GitHub Pages only after user approval.
+9. Deploy to Vercel / Render only after user approval.
 10. Comment the Issue with a concise summary.
 11. Close the Issue.
 
@@ -81,11 +81,11 @@ Use this format when closing an Issue:
 
 Do not push or deploy automatically.
 
-Push and GitHub Pages deployment should happen only after the user says something like:
+Push and deployment should happen only after the user says something like:
 
 - `OK`
 - `pushお願い`
-- `GitHub Pagesまでお願い`
+- `Render / Vercelまでお願い`
 - `アップして`
 
 ## UI Adjustment Rule
@@ -110,6 +110,14 @@ When changing build config, routing, asset paths, or deployment:
 ```bash
 npm run build
 ```
+
+For Socket.IO server deployment changes:
+
+```bash
+npm run start:server
+```
+
+Use a free local port if `3002` is already in use.
 
 ## Git Hygiene
 

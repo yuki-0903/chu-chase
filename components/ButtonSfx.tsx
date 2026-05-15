@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { playButtonClickSfx } from "@/game/systems/Sfx";
+import { playButtonClickSfx, unlockSfx } from "@/game/systems/Sfx";
 
 export function ButtonSfx() {
   useEffect(() => {
@@ -20,6 +20,7 @@ export function ButtonSfx() {
         return;
       }
 
+      unlockSfx();
       playButtonClickSfx();
     };
 

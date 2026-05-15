@@ -1,12 +1,12 @@
 # Mobile Landscape Workflow
 
-Use this guide when building a landscape-first Phaser game that must also work on smartphones.
+CHU CHASE is a landscape-first Three.js game that must also work when a phone is held vertically.
 
-## Core Lesson
+## Core Rule
 
-Avoid rotating the canvas with CSS for gameplay.
+Do not rotate the gameplay canvas with CSS.
 
-CSS such as:
+Avoid:
 
 ```css
 canvas {
@@ -14,131 +14,53 @@ canvas {
 }
 ```
 
-can make the visual canvas and Phaser input coordinates disagree. This often causes:
+CSS canvas rotation can make visual coordinates and input coordinates disagree.
 
-- tap effects appearing in the wrong place
-- left/right input being reversed or offset
-- collision or pointer logic feeling inconsistent
-- mobile-only bugs that do not appear on desktop
+## Current Direction
 
-## Recommended Direction
+The canvas stays unrotated.
 
-Keep the canvas itself unrotated.
+For smartphone portrait holding mode:
 
-Handle landscape gameplay layout inside Phaser:
+- render the Three.js scene into an offscreen render target
+- draw that render target through a rotated display quad
+- keep pointer and joystick logic in the game's own coordinate conversion layer
+- rotate DOM overlays separately only when needed
 
-- calculate the intended game width/height in Phaser
-- configure the camera/viewport intentionally
-- convert pointer coordinates through Phaser's camera world point
-- keep CSS focused on sizing and centering the canvas
+Relevant files:
 
-## CSS Rules
-
-The template should keep CSS simple:
-
-```css
-.game-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.game-canvas canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
+```txt
+game/createThreeGame.ts
+game/systems/ThreeInputController.ts
+app/globals.css
 ```
 
-Do not use CSS rotation as the first approach.
+## UI Orientation
 
-## Phaser Layout Flow
+Entry screens:
 
-For landscape-first games:
+- room create / join uses smartphone portrait orientation
+- numeric room keypad avoids opening the OS keyboard
 
-1. Decide the game's logical orientation.
-2. If the browser is landscape, use the window width as game width and window height as game height.
-3. If the browser is portrait but the game is landscape-first, decide whether to:
-   - show a rotate-device prompt, or
-   - map the game layout to a landscape logical area inside Phaser.
-4. Keep pointer input in Phaser world coordinates.
-5. Test tap position, movement direction, and visual effects on mobile early.
+Game screens:
 
-## Pointer Coordinate Rule
+- ready / playing / result are treated as landscape game screens
+- mobile portrait holding mode visually appears landscape
+- joystick appears where the player taps
 
-Use Phaser's camera conversion:
+## Input Rules
 
-```ts
-const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-```
+- Do not rely on CSS-transformed canvas coordinates.
+- Convert touch/pointer movement in `ThreeInputController`.
+- Test joystick direction on real phones after any orientation changes.
 
-Avoid hand-written coordinate transforms unless absolutely necessary.
+## Test Checklist
 
-If custom camera rotation or viewport logic is used, validate:
-
-- pointer down location
-- pointer move direction
-- hold/tap effects
-- object collection
-- UI button hit areas
-
-## Testing Checklist
-
-Before accepting a mobile landscape implementation:
-
-- [ ] Desktop landscape works.
-- [ ] Smartphone portrait holding mode is tested.
-- [ ] Smartphone landscape holding mode is tested if supported.
-- [ ] Canvas fills the intended screen area.
-- [ ] Game rendering is not offset inside the canvas.
-- [ ] Tap effect appears exactly where touched.
-- [ ] Movement direction matches the touched side or gesture.
-- [ ] UI hit areas align with visual buttons.
-- [ ] No black bars unless intentionally designed.
-- [ ] Console has no relevant errors.
-
-## Debugging Checklist
-
-When touch feels wrong, log both raw pointer values and game world values:
-
-```ts
-console.log({
-  clientX: pointer.event instanceof PointerEvent ? pointer.event.clientX : undefined,
-  clientY: pointer.event instanceof PointerEvent ? pointer.event.clientY : undefined,
-  pointerX: pointer.x,
-  pointerY: pointer.y,
-  worldX: point.x,
-  worldY: point.y
-});
-```
-
-Compare:
-
-- browser coordinates
-- Phaser pointer coordinates
-- camera world coordinates
-- visual effect coordinates
-
-Do this before adding more coordinate math.
-
-## Avoid
-
-- CSS `rotate(90deg)` for the gameplay canvas
-- mixing browser `clientX/clientY` directly with Phaser world coordinates
-- adding offset fixes without checking camera conversion first
-- assuming desktop pointer behavior matches mobile behavior
-- waiting until late development to test mobile input
-
-## Recommended First Implementation
-
-For a new game, start with:
-
-- unrotated canvas
-- `Phaser.Scale.RESIZE`
-- full-window canvas
-- camera viewport matching the canvas
-- pointer input through `getWorldPoint`
-
-Only add custom orientation behavior after the base input and rendering are correct.
+- [ ] Smartphone portrait: entry screen is readable.
+- [ ] Smartphone portrait: room code keypad appears in the intended landscape-relative side.
+- [ ] Smartphone portrait: game scene fills the screen.
+- [ ] Smartphone portrait: joystick appears where tapped.
+- [ ] Smartphone portrait: joystick up moves up, left moves left.
+- [ ] Smartphone landscape: joystick still works.
+- [ ] PC: window width 768px or less shows unsupported screen.
+- [ ] No canvas/input offset after resize.

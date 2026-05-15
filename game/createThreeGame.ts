@@ -397,6 +397,21 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
       kissProjectile.visible = true;
     },
     startReadyIntro: () => {
+      phase = "ready";
+      isOnlineMatch = false;
+      latestSnapshot = null;
+      chuserLockedUntil = 0;
+      wasChuserLocked = false;
+      chuserReleaseEffectStartedAt = 0;
+      contactPulse = 0;
+      captureEffectUntil = 0;
+      captureShake = 0;
+      resetActors(avatars);
+      contactText.visible = false;
+      kissProjectile.visible = false;
+      promptText.sprite.visible = false;
+      timerText.sprite.visible = false;
+      resultText.sprite.visible = false;
       readyIntroStartedAt = clock.getElapsedTime();
       playReadyIntroDrumroll();
       avatars.tagger.root.visible = false;

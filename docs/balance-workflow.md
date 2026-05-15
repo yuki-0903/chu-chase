@@ -41,11 +41,7 @@ Centralized balance values make it easier to:
 
 Prefer explicit caps.
 
-Examples:
-
-```ts
-const difficultyProgress = Phaser.Math.Clamp(score / difficultyScoreCap, 0, 1);
-```
+Use local helper functions or `THREE.MathUtils` when useful.
 
 This lets the game become harder over time without becoming impossible by accident.
 
@@ -64,3 +60,24 @@ For arcade games, avoid relying only on speed. Consider:
 4. Commit only after approval.
 
 Game feel is subjective. Small adjustments should be easy and reversible.
+
+## Current CHU CHASE Values
+
+Primary files:
+
+```txt
+shared/constants.ts
+game/config/balance.ts
+```
+
+Current public-facing defaults:
+
+- match duration: 60 seconds
+- DODGER head start: 5 seconds
+- captures to win: 1
+- player speed: 4.8
+- capture radius: 1.35
+- arena radius: 12
+- room code length: 5 numeric digits
+
+Keep server-side rules in `shared/constants.ts` synchronized with client-side feel values in `game/config/balance.ts`.

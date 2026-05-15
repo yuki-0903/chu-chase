@@ -1,0 +1,22 @@
+{
+  "name": "CHU CHASE",
+  "short_name": "CHU CHASE",
+  "description": "ブチューから逃げる、シュールで笑える2人用3Dブラウザゲーム。",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#F0F0F3",
+  "theme_color": "#F0F0F3",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

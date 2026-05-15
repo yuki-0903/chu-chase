@@ -1,104 +1,87 @@
 # Asset Workflow
 
-Use this guide when generating or importing game assets.
+Use this guide when importing or replacing CHU CHASE assets.
 
-## Directory Rules
-
-Put runtime assets under:
+## Runtime Asset Directories
 
 ```txt
 public/assets/
   audio/
   images/
-  sprites/
+  models/
   ui/
 ```
 
-Use clear, purpose-based names:
+Current important assets:
 
 ```txt
-player_idle.png
-button_start.png
-enemy_drone_01.png
-pickup_recovery_01.png
-se_collect.mp3
+public/assets/audio/bg.mp3
+public/assets/models/oni.glb
+public/assets/models/runner.glb
+public/assets/ui/chu.webp
+public/assets/ui/dod.webp
 ```
 
-Avoid vague names like:
+## Asset Path Rules
 
-```txt
-image1.png
-final.png
-new_new.png
-```
+Do not hard-code image/audio paths if a shared helper exists.
 
-## Phaser Asset Paths
-
-Do not hard-code `/assets/...`.
-
-Use helpers in:
+Use:
 
 ```txt
 game/config/assets.ts
 ```
 
-This keeps GitHub Pages paths working.
+Current helpers:
 
-## AI Generated Image Issues
+```ts
+ASSET_BASE
+IMAGE_ASSET_BASE
+AUDIO_ASSET_BASE
+UI_ASSET_BASE
+```
 
-AI-generated transparent PNG assets often have:
+GLB paths are currently defined in `game/avatars/ChuAvatars.ts`.
 
-- white edges
-- jagged outlines
-- uneven transparent padding
-- glow cut off by the crop
-- too much detail for small gameplay size
+## 3D Model Rules
 
-Before using generated assets:
+Preferred export:
 
-1. Trim unnecessary transparent margins.
-2. Keep the object centered.
-3. Preserve glow.
-4. Check for white or pale edge pixels.
-5. Test the asset over the actual game background.
-6. Check the asset at the size it appears in gameplay.
+- `.glb`
+- optimized for web
+- reasonable triangle count
+- texture resolution around 1024-2048 if needed
+- no huge hidden meshes
 
-## White Edge / Jagged Edge Fixes
+After replacing models:
 
-Options:
+- test PC and iPhone loading
+- check brightness and shadows
+- check that CHUSER/DODGER face the correct movement direction
+- check capture animation scale
+- check ready intro drop/turn animation
 
-- regenerate with stronger transparent-background instructions
-- crop and clean edges manually
-- reduce pale edge alpha
-- add matching glow behind the asset
-- use a silhouette-friendly design
-- avoid tiny high-detail objects
+## UI Image Rules
 
-Important gameplay objects should be recognizable by silhouette, not detail.
+UI images should be:
 
-## UI Images + Text
+- web-friendly
+- transparent or clean background
+- small enough for fast mobile load
+- readable at the final displayed size
 
-When placing Phaser text over UI images:
+For logo character images:
 
-- scale the panel and text together
-- use `screenScale`
-- keep enough vertical padding
-- test large numbers and long labels
-- avoid text-only placeholder UI when image UI is required
+- keep silhouette clear
+- avoid white edge artifacts
+- test over `--neu-bg`
 
-Panel, text, and hit area should be laid out from the same measurements.
+## Audio Rules
 
-## Mobile Visibility
+See `audio-workflow.md`.
 
-Assets that look good on desktop may be unreadable on mobile.
+Keep BGM compressed enough for mobile. Current BGM is loaded from:
 
-Check:
-
-- small gameplay size
-- dark background
-- bright background
-- motion
-- glow visibility
-- color separation from the environment
-
-For important pickups or hazards, choose colors that contrast with the main background palette.
+```txt
+public/assets/audio/bg.mp3
+```

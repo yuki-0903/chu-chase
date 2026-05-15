@@ -4,172 +4,117 @@
 
 CHU CHASE is a 1v1 online chase game.
 
-One player creates a room, and the other player joins that room.
-When both players are present, the game decides which player is the tagger and which player is the runner.
+- `CHUSER` chases and wins by catching once.
+- `DODGER` escapes and wins by surviving until time runs out.
+- The server is authoritative for movement, capture, and result judgment.
+
+Internal code still uses these role keys:
+
+```txt
+tagger -> CHUSER
+runner -> DODGER
+```
 
 ## Basic Flow
 
 1. Player A creates a room.
-2. Player B joins the room.
-3. When two players are in the room, roles are assigned.
-4. One player becomes the tagger.
-5. One player becomes the runner.
-6. The match starts.
-7. The runner tries to escape until time runs out.
-8. The tagger tries to catch the runner.
-9. The match ends when either player satisfies their win condition.
+2. Player B joins with a 5-digit numeric room code.
+3. When two players are present, roles are assigned automatically.
+4. Both players enter the ready scene.
+5. Each player presses `TAP READY`.
+6. When both are ready, the match starts.
+7. For the first 5 seconds, only DODGER can move.
+8. After 5 seconds, CHUSER is released.
+9. The match ends when CHUSER catches DODGER or time runs out.
+10. Players can press `RESTART` for a rematch.
 
-## Roles
+## Current Settings
 
-### Tagger
-
-- Chases the runner.
-- Wins by catching the runner.
-
-### Runner
-
-- Escapes from the tagger.
-- Wins by surviving until time runs out.
-
-## Initial Match Rules
-
-- Match duration: 60 seconds.
-- Captures required to win: 1.
-- If the tagger catches the runner once, the tagger wins immediately.
-- If the runner survives for 60 seconds, the runner wins.
-
-## Match Phases
+Source of truth:
 
 ```txt
-waiting
-ready
-countdown
-playing
-ended
+shared/constants.ts
+game/config/balance.ts
 ```
 
-### waiting
-
-The room exists, but there are not enough players yet.
-
-### ready
-
-Two players are in the room and the match can start.
-
-### countdown
-
-Short pre-match countdown before gameplay starts.
-
-### playing
-
-The match is active.
-
-### ended
-
-The match has ended and the result is shown.
-
-## Initial Win Conditions
-
-```txt
-tagger wins:
-  captureCount >= capturesToWin
-
-runner wins:
-  remainingTime <= 0
-```
-
-For the first version:
-
-```txt
-capturesToWin = 1
-matchDurationMs = 60_000
-```
-
-## Server Authority
-
-The server should be authoritative for match results.
-
-The client should:
-
-- send player input
-- receive snapshots
-- render the latest state
-- show local UI and effects
-
-The server should:
-
-- manage rooms
-- assign roles
-- update positions
-- detect captures
-- decide the winner
-- broadcast snapshots and result events
-
-## Room State
-
-```txt
-roomCode
-phase
-players
-settings
-startedAt
-endsAt
-captureCount
-winnerRole
-```
-
-## Player State
-
-```txt
-playerId
-nickname
-role
-position
-velocity
-connected
-lastInput
-```
-
-## Server Tick Flow
-
-1. Receive inputs from clients.
-2. Update player velocity and position.
-3. Clamp players inside the playable area.
-4. Calculate distance between tagger and runner.
-5. If distance is within capture radius, count as capture.
-6. If capture count reaches the required amount, end match with tagger win.
-7. If time runs out, end match with runner win.
-8. Broadcast the latest game snapshot to both players.
-
-## Initial Settings
+Current values:
 
 ```ts
 {
+  roomCodeLength: 5,
+  maxPlayersPerRoom: 2,
+  serverTickRate: 30,
   matchDurationMs: 60_000,
+  dodgerHeadStartMs: 5_000,
   capturesToWin: 1,
-  captureRadius: 54,
-  playerSpeed: 280,
+  captureRadius: 1.35,
+  playerSpeed: 4.8,
+  playerRadius: 0.75,
+  arenaRadius: 12,
+  mapWidth: 24,
+  mapHeight: 24,
   itemsEnabled: false
 }
 ```
 
-## Future Extensions
+## Room Phases
 
-Later versions may add:
+```txt
+waiting
+ready
+playing
+ended
+```
+
+`countdown` exists in the protocol type, but the current implementation expresses the 5-second start phase inside `playing`.
+
+## Server Responsibilities
+
+The Socket.IO server:
+
+- creates and joins rooms
+- assigns roles
+- receives input vectors
+- applies 30fps movement updates
+- clamps players inside the arena
+- detects capture distance
+- decides winner
+- broadcasts snapshots and result events
+
+The client:
+
+- sends input direction
+- renders snapshots
+- plays local UI, camera, animation, BGM, and SE
+- never decides the match winner
+
+## Server Tick Flow
+
+1. Iterate playing rooms.
+2. For each player, read latest input.
+3. If the player is CHUSER and the 5-second head start is active, force input to zero.
+4. Update velocity and position.
+5. Clamp position inside the arena.
+6. Detect CHUSER/DODGER distance.
+7. If distance is within `captureRadius`, emit `capture:happened`.
+8. If capture count reaches `capturesToWin`, end with CHUSER win.
+9. If time reaches zero, end with DODGER win.
+10. Broadcast `state:snapshot`.
+
+## Rematch
+
+When the room is `ended` and a player sends `game:ready`:
+
+- the room is prepared for rematch
+- roles are assigned again
+- both players must ready up again
+
+## Future Extensions
 
 - configurable match duration
 - configurable captures required to win
-- items
-- item spawn rules
-- item effects
-- different stage layouts
-- different movement speeds
-- rematch flow
 - room settings screen
-
-## Notes
-
-- Do not hard-code values that are likely to be tuned later.
-- Keep match settings in a shared config structure.
-- Keep result judgment on the server.
-- Keep client-side capture effects visual only.
+- items and item effects
+- old room cleanup
+- create/join rate limiting
+- simple anti-abuse checks for public release

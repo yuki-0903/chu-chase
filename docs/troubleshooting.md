@@ -1,97 +1,115 @@
 # Troubleshooting
 
-Common problems found while building Phaser + Next.js browser games.
+Common problems for the current Next.js + Three.js + Socket.IO version.
 
-## Phaser Must Be Client Only
+## Next Dev / .next Inconsistency
 
-Phaser depends on browser APIs, so it should not run during SSR.
-
-Use:
-
-- a client component
-- `next/dynamic`
-- `ssr: false`
-- dynamic `await import("phaser")` inside `createGame`
-
-Recommended pattern:
-
-```tsx
-const PhaserGame = dynamic(
-  async () => {
-    const { PhaserGameClient } = await import("@/components/PhaserGameClient");
-    return PhaserGameClient;
-  },
-  { ssr: false }
-);
-```
-
-And inside game creation:
-
-```ts
-const PhaserRuntime = await import("phaser");
-return new PhaserRuntime.Game(config);
-```
-
-Avoid importing Phaser into server components.
-
-## Dev Server / .next Inconsistency
-
-Sometimes Next.js dev/build can show errors like:
+Symptoms:
 
 ```txt
 Cannot find module './819.js'
-Cannot find module './682.js'
 GET /_next/static/chunks/main-app.js 404
 ```
 
-This usually means `.next` or the dev server has stale build output.
-
-Recommended recovery:
+Recovery:
 
 1. Stop the dev server.
 2. Start it again.
 3. If still broken, delete `.next`.
 4. Run `npm run dev` again.
 
-```bash
-rm -rf .next
-npm run dev
-```
+## Socket Server Starts as Next.js on Render
 
-Do not debug gameplay code first when the missing file is inside `.next`.
-
-## GitHub Pages Deployment 404
-
-If GitHub Actions deploy fails with:
+If Render logs show:
 
 ```txt
-Failed to create deployment (status: 404)
-Ensure GitHub Pages has been enabled
+> next start
+Could not find a production build in the '.next' directory
 ```
 
-Check repository settings:
+Render is using the wrong start command.
 
-1. Open GitHub repository settings.
-2. Go to Pages.
-3. Set Source to GitHub Actions.
-4. Re-run the workflow.
+Use:
 
-The workflow alone is not enough if Pages is not enabled.
-
-## Asset Path Problems
-
-On GitHub Pages, hard-coded paths like this may fail:
-
-```ts
-"/assets/image.png"
+```txt
+Build Command: npm install --include=dev
+Start Command: npm run start:server
 ```
 
-Use the shared asset helpers:
+## Vercel Connects to `:3002`
 
-```ts
-import { IMAGE_ASSET_BASE } from "@/game/config/assets";
+If the browser tries:
 
-this.load.image("key", `${IMAGE_ASSET_BASE}/image.png`);
+```txt
+https://chu-chase.vercel.app:3002/socket.io/
 ```
 
-This keeps local development and GitHub Pages working with the same code.
+then Vercel is missing:
+
+```txt
+NEXT_PUBLIC_SOCKET_SERVER_URL=https://chu-chase.onrender.com
+```
+
+After changing Vercel environment variables, redeploy.
+
+## Render CORS Error
+
+If the browser shows:
+
+```txt
+No 'Access-Control-Allow-Origin' header is present
+```
+
+Check Render Environment Variables:
+
+```txt
+CLIENT_ORIGIN=https://chu-chase.vercel.app
+```
+
+For temporary testing only:
+
+```txt
+CLIENT_ORIGIN=*
+```
+
+After changing Render environment variables, run:
+
+```txt
+Manual Deploy -> Deploy latest commit
+```
+
+## Render Free Sleep
+
+Render Free may sleep when inactive.
+
+Symptoms:
+
+- first access is slow
+- socket connection takes time
+- `/health` is slow on first request
+
+Check:
+
+```txt
+https://chu-chase.onrender.com/health
+```
+
+## Audio Does Not Start on iPhone
+
+Browser audio is blocked until user interaction.
+
+Expected behavior:
+
+- no BGM on page load
+- BGM starts after join / ready / restart / BGM toggle
+- `CREATE ROOM` alone should not start BGM
+
+## Mobile Controls Feel Reversed
+
+Check:
+
+- `game/systems/ThreeInputController.ts`
+- forced landscape branch in joystick direction conversion
+- real iPhone portrait and landscape behavior
+
+Do not fix this by rotating the canvas with CSS.
