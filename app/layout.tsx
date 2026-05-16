@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     description: "ブチューから逃げる、シュールで笑える2人用3Dブラウザゲーム。",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image-1200x630.png",
         width: 1200,
-        height: 1200,
+        height: 630,
         alt: "CHU CHASE"
       }
     ],
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CHU CHASE",
     description: "ブチューから逃げる、シュールで笑える2人用3Dブラウザゲーム。",
-    images: ["/og-image.png"]
+    images: ["/og-image-1200x630.png"]
   },
   appleWebApp: {
     capable: true,
