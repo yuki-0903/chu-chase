@@ -1,5 +1,7 @@
 # CHU CHASE
 
+![CHU CHASE](public/og-image-1200x630.png)
+
 ブチューから逃げる、シュールで笑える2人用3Dブラウザゲーム。
 
 Play: https://chu-chase.vercel.app/
