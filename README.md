@@ -1,119 +1,76 @@
-# CHU CHASE 3D Template
+# CHU CHASE
 
-A CHU CHASE-ready 3D browser game template built with Next.js, TypeScript, and Three.js.
+ブチューから逃げる、シュールで笑える2人用3Dブラウザゲーム。
 
-The project art direction is documented in:
+Play: https://chu-chase.vercel.app/
 
-```txt
-docs/art-direction.md
-```
+## 遊び方
 
-Do not implement concrete game content until the game specification is provided.
+1. 片方のプレイヤーが `CREATE ROOM` を押して部屋コードを作ります。
+2. もう片方のプレイヤーが部屋コードを入力して `JOIN` します。
+3. 2人がそろうと、それぞれ `CHUSER` / `DODGER` の役割が決まります。
+4. 両方のプレイヤーが `START READY` を押すとゲーム開始です。
+5. 最初の5秒間は `DODGER` だけ動けます。
+6. 5秒後、`CHUSER` が解放されます。
+7. `CHUSER` が `DODGER` に触れたら `CHUSER` の勝ちです。
+8. 制限時間まで逃げ切れたら `DODGER` の勝ちです。
 
-## Included
+## 役割
+
+- `CHUSER`: 唇がある追いかける側。1回捕まえたら勝ち。
+- `DODGER`: 逃げる側。制限時間まで逃げ切れば勝ち。
+
+## 操作
+
+### スマホ
+
+- 画面を横向きでプレイします。
+- ゲーム画面をタップすると、その場所に丸いバーチャルジョイスティックが出ます。
+- スティックを倒した方向にキャラクターが移動します。
+
+### PC
+
+- `WASD` または矢印キーで移動します。
+- 横幅が狭いPC画面ではプレイできないようにしています。
+
+## 技術構成
 
 - Next.js App Router
 - TypeScript
-- Three.js rendered on the client only
-- Dynamic import with SSR disabled for the 3D canvas
-- React shell separated from the Three.js game instance
-- Full-screen responsive WebGL canvas
-- Keyboard and pointer input foundation
-- Typed game event bus
-- Audio settings storage helpers
-- GitHub Pages static export settings
-- Socket.IO server/protocol foundation for future multiplayer work
-- Minimal placeholder 3D scene for renderer, camera, lights, resize, input, and disposal checks
+- Three.js
+- Socket.IO
+- Vercel
+- Render
 
-## Directory
-
-```txt
-app/
-  layout.tsx
-  page.tsx
-  globals.css
-components/
-  GameShell.tsx
-  ThreeCanvas.tsx
-  ThreeGameClient.tsx
-game/
-  createThreeGame.ts
-  config/
-    assets.ts
-    balance.ts
-    gameConfig.ts
-    network.ts
-  systems/
-    AudioSettings.ts
-    GameEvents.ts
-    ThreeInputController.ts
-  types/
-    GameState.ts
-server/
-  index.ts
-shared/
-  constants.ts
-  math.ts
-  protocol.ts
-public/
-  assets/
-    audio/
-    images/
-    ui/
-```
-
-## Start
+## ローカル開発
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
-
-## Multiplayer Server
-
-The Socket.IO server foundation can be run separately:
+別ターミナルでSocket.IOサーバーを起動します。
 
 ```bash
 npm run dev:server
 ```
 
-Default server URL:
+デフォルト:
 
 ```txt
-http://localhost:3001
+Client: http://localhost:3000
+Socket server: http://localhost:3002
 ```
 
-Client connection settings live in:
+## Docs
+
+制作方針や現在の仕様は `docs/` にまとめています。
 
 ```txt
-game/config/network.ts
-```
-
-## GitHub Pages
-
-The Next.js config is prepared for static export.
-
-When deploying to GitHub Pages, set:
-
-```bash
-NEXT_PUBLIC_BASE_PATH=/${{ github.event.repository.name }}
-```
-
-Runtime asset paths should use `game/config/assets.ts` instead of hard-coded `/assets/...`.
-
-## Workflow Docs
-
-```txt
-docs/codex-workflow.md
+docs/README.md
 docs/art-direction.md
-docs/responsive-game-layout.md
-docs/mobile-landscape-workflow.md
-docs/troubleshooting.md
+docs/current-game-structure.md
+docs/game-algorithm.md
+docs/deployment.md
 docs/audio-workflow.md
-docs/asset-workflow.md
-docs/balance-workflow.md
 ```
-
-Some older workflow notes may still mention Phaser from the original template. Use the current source as the authority for runtime architecture: this project now uses Three.js for 3D rendering.
