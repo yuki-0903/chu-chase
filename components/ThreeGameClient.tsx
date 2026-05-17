@@ -8,7 +8,8 @@ import type {
   GameStartPayload,
   PlayerId,
   PlayerInputPayload,
-  PlayerRole
+  PlayerRole,
+  StageVariant
 } from "@/shared/protocol";
 
 interface ThreeGameClientProps {
@@ -22,6 +23,7 @@ interface ThreeGameClientProps {
   selfPlayerId?: PlayerId;
   selfRole?: PlayerRole;
   snapshot?: GameSnapshotPayload | null;
+  stageVariant?: StageVariant;
 }
 
 export function ThreeGameClient({
@@ -34,7 +36,8 @@ export function ThreeGameClient({
   readyIntroSignal = 0,
   selfPlayerId,
   selfRole,
-  snapshot
+  snapshot,
+  stageVariant
 }: ThreeGameClientProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<ThreeGameHandle | null>(null);
@@ -45,7 +48,8 @@ export function ThreeGameClient({
     onAssetsReady,
     onInput,
     selfPlayerId,
-    selfRole
+    selfRole,
+    stageVariant
   });
 
   useEffect(() => {
@@ -61,7 +65,8 @@ export function ThreeGameClient({
       onAssetsReady: initialOptions.onAssetsReady,
       onInput: initialOptions.onInput,
       selfPlayerId: initialOptions.selfPlayerId,
-      selfRole: initialOptions.selfRole
+      selfRole: initialOptions.selfRole,
+      stageVariant: initialOptions.stageVariant
     });
 
     return () => {
@@ -93,6 +98,10 @@ export function ThreeGameClient({
       gameRef.current?.setSnapshot(snapshot, selfPlayerId);
     }
   }, [selfPlayerId, snapshot]);
+
+  useEffect(() => {
+    gameRef.current?.setStageVariant(stageVariant);
+  }, [stageVariant]);
 
   useEffect(() => {
     if (capture) {

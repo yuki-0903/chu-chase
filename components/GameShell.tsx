@@ -119,6 +119,7 @@ export function GameShell() {
   }, [gameEnd, gameStart]);
   const isRoomReady = room?.phase === "ready";
   const isGameVisible = isRoomReady || Boolean(gameStart);
+  const hasJoinedPair = Boolean(room && room.players.length >= 2);
   const shouldShowGameLoadingCover = isGameVisible && !areGameAssetsReady;
   const shouldShowReadyIntroUi = isRoomReady && areGameAssetsReady && isReadyIntroComplete && !gameStart;
   const selfRole = room?.players.find((player) => player.id === room.playerId)?.role;
@@ -218,6 +219,11 @@ export function GameShell() {
       <BgmPlayer />
       <ButtonSfx />
       <AudioToggle />
+      {hasJoinedPair ? (
+        <div className="room-code-badge" aria-label="Room code">
+          ROOM {room?.roomCode}
+        </div>
+      ) : null}
       <div className="orientation-stage">
         <section className="game-frame" aria-label="CHU CHASE">
           {isGameVisible ? (
@@ -233,6 +239,7 @@ export function GameShell() {
                 selfPlayerId={room?.playerId}
                 selfRole={selfRole}
                 snapshot={snapshot}
+                stageVariant={gameStart?.stageVariant ?? snapshot?.stageVariant ?? room?.stageVariant}
               />
               <div className="game-hud" aria-hidden="true">
                 {gameStart && !gameEnd ? (
@@ -301,7 +308,14 @@ export function GameShell() {
               ) : null}
             </>
           ) : (
-            <div className="room-wait-screen" aria-hidden="true">
+            <div
+              className={[
+                "room-wait-screen",
+                room?.phase === "stage-select" ? "room-wait-screen--stage-select" : "",
+                hasJoinedPair ? "room-wait-screen--hide-logo" : ""
+              ].filter(Boolean).join(" ")}
+              aria-hidden="true"
+            >
               <div className="room-wait-screen__logo">
                 <div className="room-wait-screen__logo-badges">
                   <img src="/assets/ui/dod.webp" alt="" className="room-wait-screen__logo-avatar" />

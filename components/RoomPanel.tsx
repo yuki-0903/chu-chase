@@ -17,12 +17,17 @@ import type {
   PlayerInputPayload,
   RoomJoinedPayload,
   ServerErrorPayload,
-  ServerToClientEvents
+  ServerToClientEvents,
+  StageVariant
 } from "@/shared/protocol";
 
 type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 type ConnectionState = "connecting" | "connected" | "disconnected";
 type RoomLeaveResponse = { ok: true } | ServerErrorPayload;
+const STAGE_OPTIONS: Array<{ description: string; label: string; preview: StageVariant; variant: StageVariant }> = [
+  { description: "SOFT ROOM", label: "Simple White Room", preview: "plain", variant: "plain" },
+  { description: "WALL MAZE", label: "Chu Maze", preview: "maze", variant: "maze" }
+];
 
 function isServerError(payload: RoomJoinedPayload | ServerErrorPayload): payload is ServerErrorPayload {
   return "code" in payload;
@@ -63,6 +68,9 @@ export function RoomPanel({
   const [error, setError] = useState("");
   const [hasGameStarted, setHasGameStarted] = useState(false);
   const [hasGameEnded, setHasGameEnded] = useState(false);
+  const [hasSelectedStage, setHasSelectedStage] = useState(false);
+  const [isSelectingStage, setIsSelectingStage] = useState(false);
+  const [selectedStageVariant, setSelectedStageVariant] = useState<StageVariant>("plain");
   const [usesTouchNumberPad, setUsesTouchNumberPad] = useState(false);
   const [isNumberPadOpen, setIsNumberPadOpen] = useState(false);
   const [buttonPopKey, setButtonPopKey] = useState(0);
@@ -109,6 +117,9 @@ export function RoomPanel({
       onRoomChange(payload);
       setRoomCodeInput(payload.roomCode);
       setIsNumberPadOpen(false);
+      setHasSelectedStage(false);
+      setIsSelectingStage(false);
+      setSelectedStageVariant(payload.stageVariant);
       setHasGameEnded(false);
       setError("");
     });
@@ -118,6 +129,9 @@ export function RoomPanel({
       onRoomChange(payload);
       setRoomCodeInput(payload.roomCode);
       setIsNumberPadOpen(false);
+      setHasSelectedStage(true);
+      setIsSelectingStage(false);
+      setSelectedStageVariant(payload.stageVariant);
       setHasGameEnded(false);
       setError("");
     });
@@ -130,6 +144,13 @@ export function RoomPanel({
       setRoom(payload);
       onRoomChange(payload);
       setRoomCodeInput(payload.roomCode);
+      if (payload.phase !== "waiting" || payload.players[0]?.id !== payload.playerId) {
+        setHasSelectedStage(true);
+      }
+      if (payload.phase === "stage-select" && payload.players[0]?.id === payload.playerId) {
+        setHasSelectedStage(false);
+        setSelectedStageVariant(payload.stageVariant);
+      }
       if (payload.phase === "ready") {
         setHasGameEnded(false);
         setHasGameStarted(false);
@@ -160,6 +181,9 @@ export function RoomPanel({
       socketRef.current = null;
       setHasGameStarted(false);
       setHasGameEnded(false);
+      setHasSelectedStage(false);
+      setIsSelectingStage(false);
+      setSelectedStageVariant("plain");
       onInputSenderChange(null);
       onRoomChange(null);
     };
@@ -167,10 +191,14 @@ export function RoomPanel({
 
   const canUseRoomActions = connectionState === "connected";
   const isReady = room?.phase === "ready";
+  const isStageSelect = room?.phase === "stage-select";
   const isEnded = hasGameEnded || room?.phase === "ended";
   const isEntry = !room;
-  const isWaitingForOpponent = Boolean(room && !isReady && !isEnded);
+  const isWaitingForOpponent = Boolean(room && room.phase === "waiting" && !isEnded);
   const selfPlayer = room?.players.find((player) => player.id === room.playerId);
+  const isRoomCreator = Boolean(room && room.players[0]?.id === room.playerId);
+  const shouldShowStageSelect = Boolean(isStageSelect && isRoomCreator && !hasSelectedStage);
+  const shouldShowStageWaiting = Boolean(isStageSelect && !shouldShowStageSelect);
 
   if (hasGameStarted && !isEnded) {
     return null;
@@ -188,6 +216,8 @@ export function RoomPanel({
       setRoom(response);
       onRoomChange(response);
       setRoomCodeInput(response.roomCode);
+      setHasSelectedStage(false);
+      setSelectedStageVariant(response.stageVariant);
       readyPlayerCountRef.current = response.players.filter((player) => player.ready).length;
     });
   };
@@ -212,6 +242,8 @@ export function RoomPanel({
       setRoom(response);
       onRoomChange(response);
       setRoomCodeInput(response.roomCode);
+      setHasSelectedStage(true);
+      setSelectedStageVariant(response.stageVariant);
       readyPlayerCountRef.current = response.players.filter((player) => player.ready).length;
     });
   };
@@ -237,7 +269,27 @@ export function RoomPanel({
       setIsNumberPadOpen(false);
       setHasGameStarted(false);
       setHasGameEnded(false);
+      setHasSelectedStage(false);
+      setIsSelectingStage(false);
+      setSelectedStageVariant("plain");
       readyPlayerCountRef.current = 0;
+    });
+  };
+
+  const startSelectedStage = () => {
+    setError("");
+    setIsSelectingStage(true);
+    socketRef.current?.emit("room:select-stage", { stageVariant: selectedStageVariant }, (response) => {
+      setIsSelectingStage(false);
+      if (isServerError(response)) {
+        setError(response.message);
+        return;
+      }
+
+      setRoom(response);
+      onRoomChange(response);
+      setHasSelectedStage(true);
+      setSelectedStageVariant(response.stageVariant);
     });
   };
 
@@ -262,6 +314,7 @@ export function RoomPanel({
   const shouldShowNumberPad = isEntry && usesTouchNumberPad && isNumberPadOpen;
   const panelClassName = [
     "room-panel",
+    shouldShowStageSelect ? "room-panel--stage-select" : "",
     isReady ? "room-panel--ready-controls" : "",
     isReady && showReadyControls ? "room-panel--ready-visible" : "",
     isEnded ? "room-panel--ended-controls" : "",
@@ -279,7 +332,11 @@ export function RoomPanel({
       </div>
 
       <div className={panelClassName}>
-        {!isReady && !isEnded ? <div className="room-panel__title">ROOM</div> : null}
+        {!isReady && !isEnded ? (
+          <div className="room-panel__title">
+            {shouldShowStageSelect ? "SELECT STAGE" : shouldShowStageWaiting ? "STAGE" : "ROOM"}
+          </div>
+        ) : null}
 
         {isEntry ? (
           <>
@@ -327,7 +384,56 @@ export function RoomPanel({
           </>
         ) : null}
 
-        {isWaitingForOpponent ? (
+        {shouldShowStageSelect ? (
+          <>
+            <div className="room-panel__stage-grid" aria-label="Stage select">
+              {STAGE_OPTIONS.map((stage) => (
+                <button
+                  key={stage.variant}
+                  type="button"
+                  className={[
+                    "room-panel__stage-card",
+                    `room-panel__stage-card--${stage.preview}`,
+                    selectedStageVariant === stage.variant ? "room-panel__stage-card--selected" : ""
+                  ].filter(Boolean).join(" ")}
+                  onClick={() => setSelectedStageVariant(stage.variant)}
+                  disabled={!canUseRoomActions || isSelectingStage}
+                >
+                  {selectedStageVariant === stage.variant ? (
+                    <span className="room-panel__stage-selected-label">SELECTED</span>
+                  ) : null}
+                  <span className="room-panel__stage-preview" aria-hidden="true">
+                    <span className="room-panel__stage-preview-floor" />
+                  </span>
+                  <span className="room-panel__stage-label">{stage.label}</span>
+                  <span className="room-panel__stage-description">{stage.description}</span>
+                </button>
+              ))}
+            </div>
+            <div className="room-panel__hint">{isSelectingStage ? "LOADING..." : "ステージを選んでSTART"}</div>
+            <button
+              type="button"
+              className="room-panel__start-stage-button"
+              onClick={startSelectedStage}
+              disabled={!canUseRoomActions || isSelectingStage}
+            >
+              START
+            </button>
+          </>
+        ) : null}
+
+        {shouldShowStageWaiting ? (
+          <>
+            <div className="room-panel__room">
+              <div className="room-panel__hint">ホストがステージを選んでいます</div>
+            </div>
+            <button type="button" className="room-panel__secondary-button" onClick={leaveRoom}>
+              BACK
+            </button>
+          </>
+        ) : null}
+
+        {isWaitingForOpponent && !shouldShowStageSelect ? (
           <>
             <div className="room-panel__room">
               <div className="room-panel__label">ROOM CODE</div>

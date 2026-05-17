@@ -14,6 +14,7 @@ import {
   CHUSER_SPEED_MULTIPLIER,
   DODGER_SPEED_MULTIPLIER
 } from "../shared/constants";
+import { getStageWalls } from "../shared/stages";
 import type {
   ClientToServerEvents,
   EndReason,
@@ -31,7 +32,8 @@ import type {
   RoomPhase,
   ServerErrorPayload,
   ServerToClientEvents,
-  SocketData
+  SocketData,
+  StageVariant
 } from "../shared/protocol";
 
 interface RoomPlayer {
@@ -49,6 +51,7 @@ interface RoomPlayer {
 interface Room {
   code: RoomCode;
   phase: RoomPhase;
+  stageVariant: StageVariant;
   players: RoomPlayer[];
   settings: MatchSettingsPayload;
   round: number;
@@ -75,6 +78,7 @@ const ENDED_ROOM_TTL_MS = Number(process.env.ENDED_ROOM_TTL_MS ?? 5 * 60 * 1000)
 const DISCONNECTED_ROOM_TTL_MS = Number(process.env.DISCONNECTED_ROOM_TTL_MS ?? 2 * 60 * 1000);
 const rooms = new Map<RoomCode, Room>();
 const rateLimits = new Map<string, RateLimitBucket>();
+const STAGE_VARIANTS: StageVariant[] = ["plain", "maze"];
 
 const defaultSettings: MatchSettingsPayload = {
   matchDurationMs: MATCH_DURATION_MS,
@@ -210,7 +214,7 @@ io.on("connection", (socket) => {
 
     if (room.players.length === MAX_PLAYERS_PER_ROOM) {
       assignRoles(room);
-      room.phase = "ready";
+      room.phase = "stage-select";
     }
 
     touchRoom(room);
@@ -218,6 +222,44 @@ io.on("connection", (socket) => {
     socket.emit("room:joined", response);
     emitRoomUpdate(room);
     ack?.(response);
+  });
+
+  socket.on("room:select-stage", (payload, ack) => {
+    const roomCode = socket.data.roomCode;
+    const playerId = socket.data.playerId;
+
+    if (!roomCode || !playerId) {
+      ack?.(createError("not-in-room", "You are not in a room."));
+      return;
+    }
+
+    const room = rooms.get(roomCode);
+
+    if (!room) {
+      ack?.(createError("room-not-found", "Room was not found."));
+      return;
+    }
+
+    if (room.phase !== "stage-select") {
+      ack?.(createError("room-already-started", "Room has already started."));
+      return;
+    }
+
+    if (room.players[0]?.id !== playerId) {
+      ack?.(createError("server-error", "Only the room creator can select a stage."));
+      return;
+    }
+
+    if (!isStageVariant(payload.stageVariant)) {
+      ack?.(createError("server-error", "Stage is invalid."));
+      return;
+    }
+
+    room.stageVariant = payload.stageVariant;
+    room.phase = "ready";
+    touchRoom(room);
+    emitRoomUpdate(room);
+    ack?.(buildRoomPayload(room, playerId));
   });
 
   socket.on("room:leave", (ack) => {
@@ -343,6 +385,7 @@ function createRoom(): Room {
   return {
     code: createUniqueRoomCode(),
     phase: "waiting",
+    stageVariant: pickStageVariant(),
     players: [],
     settings: { ...defaultSettings },
     round: 1,
@@ -372,6 +415,7 @@ function buildRoomPayload(room: Room, playerId: PlayerId): RoomJoinedPayload {
     playerId,
     phase: room.phase,
     round: room.round,
+    stageVariant: room.stageVariant,
     players: room.players.map(toPublicPlayer),
     settings: room.settings
   };
@@ -403,7 +447,7 @@ function leaveRoom(socket: ServerSocket, roomCode: RoomCode, playerId: PlayerId)
     return;
   }
 
-  if (room.phase === "ready") {
+  if (room.phase === "ready" || room.phase === "stage-select") {
     room.phase = "waiting";
     room.players.forEach((player) => {
       player.ready = false;
@@ -431,6 +475,7 @@ function buildGameStartPayload(room: Room) {
     serverTime: now,
     startsAt: room.startedAt ?? now,
     round: room.round,
+    stageVariant: room.stageVariant,
     players: room.players.map(toPlayerSnapshot)
   };
 }
@@ -441,6 +486,7 @@ function buildSnapshot(room: Room): GameSnapshotPayload {
     roomCode: room.code,
     phase: room.phase,
     round: room.round,
+    stageVariant: room.stageVariant,
     remainingMs: Math.max(0, (room.endsAt ?? Date.now()) - Date.now()),
     captureCount: room.captureCount,
     players: room.players.map(toPlayerSnapshot)
@@ -508,6 +554,23 @@ function normalizeInput(payload: PlayerInputPayload) {
   };
 }
 
+function pickStageVariant(previous?: StageVariant): StageVariant {
+  if (STAGE_VARIANTS.length <= 1) {
+    return STAGE_VARIANTS[0];
+  }
+
+  let next = STAGE_VARIANTS[randomInt(STAGE_VARIANTS.length)];
+  while (next === previous) {
+    next = STAGE_VARIANTS[randomInt(STAGE_VARIANTS.length)];
+  }
+
+  return next;
+}
+
+function isStageVariant(value: string): value is StageVariant {
+  return STAGE_VARIANTS.includes(value as StageVariant);
+}
+
 function updatePlayingRooms() {
   const deltaSeconds = 1 / 30;
   const now = Date.now();
@@ -531,7 +594,7 @@ function updatePlayingRooms() {
       };
       player.position.x += player.velocity.x * deltaSeconds;
       player.position.y += player.velocity.y * deltaSeconds;
-      keepPlayerInsideArena(player.position);
+      keepPlayerInsideArena(player.position, room.stageVariant);
     });
 
     const capture = findCapture(room);
@@ -602,13 +665,44 @@ function buildGameEndedPayload(room: Room, winnerRole: PlayerRole | undefined, r
   };
 }
 
-function keepPlayerInsideArena(position: { x: number; y: number }) {
+function keepPlayerInsideArena(position: { x: number; y: number }, stageVariant: StageVariant) {
   const limit = ARENA_RADIUS - 0.75;
-  const length = Math.hypot(position.x, position.y);
+  position.x = clamp(position.x, -limit, limit);
+  position.y = clamp(position.y, -limit, limit);
+  resolveStageWallCollisions(position, stageVariant);
+}
 
-  if (length > limit) {
-    position.x = (position.x / length) * limit;
-    position.y = (position.y / length) * limit;
+function resolveStageWallCollisions(position: { x: number; y: number }, stageVariant: StageVariant) {
+  const playerRadius = 0.72;
+  const walls = getStageWalls(stageVariant);
+
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    walls.forEach((wall) => {
+      const minX = wall.x - wall.width / 2 - playerRadius;
+      const maxX = wall.x + wall.width / 2 + playerRadius;
+      const minY = wall.y - wall.height / 2 - playerRadius;
+      const maxY = wall.y + wall.height / 2 + playerRadius;
+
+      if (position.x < minX || position.x > maxX || position.y < minY || position.y > maxY) {
+        return;
+      }
+
+      const pushLeft = Math.abs(position.x - minX);
+      const pushRight = Math.abs(maxX - position.x);
+      const pushDown = Math.abs(position.y - minY);
+      const pushUp = Math.abs(maxY - position.y);
+      const smallestPush = Math.min(pushLeft, pushRight, pushDown, pushUp);
+
+      if (smallestPush === pushLeft) {
+        position.x = minX;
+      } else if (smallestPush === pushRight) {
+        position.x = maxX;
+      } else if (smallestPush === pushDown) {
+        position.y = minY;
+      } else {
+        position.y = maxY;
+      }
+    });
   }
 }
 
