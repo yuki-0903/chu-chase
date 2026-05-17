@@ -30,6 +30,7 @@ export interface RoomCreatedPayload {
   roomCode: RoomCode;
   playerId: PlayerId;
   phase: RoomPhase;
+  round: number;
   players: PublicPlayer[];
   settings: MatchSettingsPayload;
 }
@@ -38,6 +39,7 @@ export interface RoomJoinedPayload {
   roomCode: RoomCode;
   playerId: PlayerId;
   phase: RoomPhase;
+  round: number;
   players: PublicPlayer[];
   settings: MatchSettingsPayload;
 }
@@ -68,6 +70,7 @@ export interface GameSnapshotPayload {
   serverTime: number;
   roomCode: RoomCode;
   phase: RoomPhase;
+  round: number;
   remainingMs: number;
   captureCount: number;
   players: PlayerSnapshot[];
@@ -77,6 +80,7 @@ export interface GameStartPayload {
   roomCode: RoomCode;
   serverTime: number;
   startsAt: number;
+  round: number;
   players: PlayerSnapshot[];
 }
 
@@ -92,6 +96,7 @@ export interface CaptureHappenedPayload {
 export interface GameEndedPayload {
   roomCode: RoomCode;
   serverTime: number;
+  round: number;
   winnerRole?: PlayerRole;
   reason: EndReason;
   captureCount: number;

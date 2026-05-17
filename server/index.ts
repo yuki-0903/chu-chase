@@ -1,6 +1,6 @@
 import express from "express";
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { Server, type Socket } from "socket.io";
 import {
   CAPTURE_RADIUS,
@@ -51,11 +51,13 @@ interface Room {
   phase: RoomPhase;
   players: RoomPlayer[];
   settings: MatchSettingsPayload;
+  round: number;
   createdAt: number;
   updatedAt: number;
   startedAt?: number;
   endsAt?: number;
   captureCount: number;
+  repeatedRoleAssignmentCount: number;
   winnerRole?: PlayerRole;
   endReason?: EndReason;
 }
@@ -343,9 +345,11 @@ function createRoom(): Room {
     phase: "waiting",
     players: [],
     settings: { ...defaultSettings },
+    round: 1,
     createdAt: now,
     updatedAt: now,
-    captureCount: 0
+    captureCount: 0,
+    repeatedRoleAssignmentCount: 0
   };
 }
 
@@ -367,6 +371,7 @@ function buildRoomPayload(room: Room, playerId: PlayerId): RoomJoinedPayload {
     roomCode: room.code,
     playerId,
     phase: room.phase,
+    round: room.round,
     players: room.players.map(toPublicPlayer),
     settings: room.settings
   };
@@ -425,6 +430,7 @@ function buildGameStartPayload(room: Room) {
     roomCode: room.code,
     serverTime: now,
     startsAt: room.startedAt ?? now,
+    round: room.round,
     players: room.players.map(toPlayerSnapshot)
   };
 }
@@ -434,6 +440,7 @@ function buildSnapshot(room: Room): GameSnapshotPayload {
     serverTime: Date.now(),
     roomCode: room.code,
     phase: room.phase,
+    round: room.round,
     remainingMs: Math.max(0, (room.endsAt ?? Date.now()) - Date.now()),
     captureCount: room.captureCount,
     players: room.players.map(toPlayerSnapshot)
@@ -465,13 +472,14 @@ function startRoom(room: Room) {
 
 function prepareRoomForRematch(room: Room) {
   room.phase = "ready";
+  room.round += 1;
   touchRoom(room);
   room.startedAt = undefined;
   room.endsAt = undefined;
   room.captureCount = 0;
   room.winnerRole = undefined;
   room.endReason = undefined;
-  assignRoles(room);
+  assignRoles(room, { preventRoleLock: true });
 
   room.players.forEach((player) => {
     player.ready = false;
@@ -587,6 +595,7 @@ function buildGameEndedPayload(room: Room, winnerRole: PlayerRole | undefined, r
   return {
     roomCode: room.code,
     serverTime: Date.now(),
+    round: room.round,
     winnerRole,
     reason,
     captureCount: room.captureCount
@@ -684,16 +693,29 @@ function closeRoom(room: Room, reason: EndReason) {
   });
 }
 
-function assignRoles(room: Room) {
+function assignRoles(room: Room, options: { preventRoleLock?: boolean } = {}) {
   const [firstPlayer, secondPlayer] = room.players;
 
   if (!firstPlayer || !secondPlayer) {
     return;
   }
 
-  const firstIsTagger = Math.random() < 0.5;
-  firstPlayer.role = firstIsTagger ? "tagger" : "runner";
-  secondPlayer.role = firstIsTagger ? "runner" : "tagger";
+  const previousFirstRole = firstPlayer.role;
+  let nextFirstRole: PlayerRole = randomInt(2) === 0 ? "tagger" : "runner";
+
+  if (options.preventRoleLock && previousFirstRole && nextFirstRole === previousFirstRole) {
+    room.repeatedRoleAssignmentCount += 1;
+
+    if (room.repeatedRoleAssignmentCount >= 2) {
+      nextFirstRole = previousFirstRole === "tagger" ? "runner" : "tagger";
+      room.repeatedRoleAssignmentCount = 0;
+    }
+  } else {
+    room.repeatedRoleAssignmentCount = 0;
+  }
+
+  firstPlayer.role = nextFirstRole;
+  secondPlayer.role = nextFirstRole === "tagger" ? "runner" : "tagger";
 }
 
 function createUniqueRoomCode(): RoomCode {
@@ -717,8 +739,8 @@ function createRoomCode(): RoomCode {
   return code;
 }
 
-function normalizeRoomCode(roomCode: RoomCode): RoomCode {
-  return roomCode.trim();
+function normalizeRoomCode(roomCode?: RoomCode): RoomCode {
+  return roomCode?.trim() ?? "";
 }
 
 function isValidRoomCode(roomCode: RoomCode) {

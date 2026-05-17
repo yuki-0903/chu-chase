@@ -51,7 +51,7 @@ export function GameShell() {
     }
 
     if (nextRoom.phase === "ready") {
-      const nextReadyIntroRoomKey = `${nextRoom.roomCode}:${nextRoom.playerId}:ready`;
+      const nextReadyIntroRoomKey = `${nextRoom.roomCode}:${nextRoom.playerId}:${nextRoom.round}:ready`;
       const isSameReadyIntroRoom = readyIntroRoomKeyRef.current === nextReadyIntroRoomKey;
       setGameStart(null);
       setGameEnd(null);
@@ -89,7 +89,7 @@ export function GameShell() {
       return;
     }
 
-    const readyIntroRoomKey = `${room.roomCode}:${room.playerId}:ready`;
+    const readyIntroRoomKey = `${room.roomCode}:${room.playerId}:${room.round}:ready`;
     if (readyIntroRoomKeyRef.current === readyIntroRoomKey) {
       return;
     }
