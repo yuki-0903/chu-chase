@@ -871,7 +871,7 @@ function createLoadingOverlay() {
 
 function createTemplateStage() {
   const group = new THREE.Group();
-  const stageSize = GAME_BALANCE.arenaRadius * 1.82;
+  const stageSize = (GAME_BALANCE.arenaRadius - 0.75) * 2;
   const roomMaterial = new THREE.MeshStandardMaterial({
     color: NEU_COLORS.bg,
     roughness: 0.78,
@@ -1415,14 +1415,9 @@ function updateKissProjectile(
 }
 
 function keepInsideArena(position: THREE.Vector3) {
-  const horizontal = new THREE.Vector2(position.x, position.z);
   const limit = GAME_BALANCE.arenaRadius - 0.75;
-
-  if (horizontal.length() > limit) {
-    horizontal.setLength(limit);
-    position.x = horizontal.x;
-    position.z = horizontal.y;
-  }
+  position.x = clamp(position.x, -limit, limit);
+  position.z = clamp(position.z, -limit, limit);
 }
 
 function disposeObject(object: THREE.Object3D) {
