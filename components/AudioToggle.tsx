@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
 import { startBgm, stopBgm } from "@/game/systems/Bgm";
 import { loadAudioSettings, saveAudioSettings, type AudioSettings } from "@/game/systems/AudioSettings";
 
 export function AudioToggle() {
-  const [settings, setSettings] = useState<AudioSettings>(() => loadAudioSettings());
+  const [settings, setSettings] = useState<AudioSettings>({ bgmEnabled: true, seEnabled: true });
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setSettings(loadAudioSettings());
+    setIsMounted(true);
+  }, []);
 
   const updateSettings = (nextSettings: AudioSettings) => {
     saveAudioSettings(nextSettings);
@@ -42,7 +49,7 @@ export function AudioToggle() {
         aria-pressed={settings.bgmEnabled}
         onClick={toggleBgm}
       >
-        BGM {settings.bgmEnabled ? "ON" : "OFF"}
+        BGM {isMounted && !settings.bgmEnabled ? "OFF" : "ON"}
       </button>
       <button
         type="button"
@@ -50,7 +57,7 @@ export function AudioToggle() {
         aria-pressed={settings.seEnabled}
         onClick={toggleSe}
       >
-        SE {settings.seEnabled ? "ON" : "OFF"}
+        SE {isMounted && !settings.seEnabled ? "OFF" : "ON"}
       </button>
     </div>
   );

@@ -22,6 +22,7 @@ const ROLE_LABELS: Record<PlayerRole, string> = {
   tagger: "CHUSER",
   runner: "DODGER"
 };
+const JOYSTICK_HINT_MS = 2300;
 
 export function GameShell() {
   const [now, setNow] = useState(() => Date.now());
@@ -33,6 +34,7 @@ export function GameShell() {
   const [sendInput, setSendInput] = useState<((payload: PlayerInputPayload) => void) | null>(null);
   const [areGameAssetsReady, setAreGameAssetsReady] = useState(false);
   const [isReadyIntroComplete, setIsReadyIntroComplete] = useState(false);
+  const [isJoystickHintVisible, setIsJoystickHintVisible] = useState(false);
   const [readyIntroSignal, setReadyIntroSignal] = useState(0);
   const readyIntroRoomKeyRef = useRef("");
   const lastWarningSecondRef = useRef<number | null>(null);
@@ -115,7 +117,6 @@ export function GameShell() {
 
     return () => window.clearInterval(intervalId);
   }, [gameEnd, gameStart]);
-
   const isRoomReady = room?.phase === "ready";
   const isGameVisible = isRoomReady || Boolean(gameStart);
   const shouldShowGameLoadingCover = isGameVisible && !areGameAssetsReady;
@@ -156,6 +157,33 @@ export function GameShell() {
     elapsedSinceStart >= DODGER_HEAD_START_MS &&
     elapsedSinceStart <= DODGER_HEAD_START_MS + 1300
   );
+  const shouldShowJoystickHint = Boolean(gameStart && !gameEnd && isJoystickHintVisible);
+
+  useEffect(() => {
+    if (!gameStart || gameEnd || !selfRole) {
+      setIsJoystickHintVisible(false);
+      return;
+    }
+
+    let hideTimeoutId: number | undefined;
+    const delayMs =
+      selfRole === "tagger"
+        ? Math.max(0, gameStart.startsAt + DODGER_HEAD_START_MS - Date.now())
+        : 0;
+    const showTimeoutId = window.setTimeout(() => {
+      setIsJoystickHintVisible(true);
+      hideTimeoutId = window.setTimeout(() => {
+        setIsJoystickHintVisible(false);
+      }, JOYSTICK_HINT_MS);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(showTimeoutId);
+      if (hideTimeoutId !== undefined) {
+        window.clearTimeout(hideTimeoutId);
+      }
+    };
+  }, [gameEnd, gameStart, selfRole]);
 
   useEffect(() => {
     if (!gameStart || gameEnd || remainingSeconds <= 0 || remainingSeconds > 10) {
@@ -261,7 +289,11 @@ export function GameShell() {
                   </div>
                 </div>
               ) : null}
-              <div className="virtual-joystick" aria-label="Move joystick">
+              <div
+                className={`virtual-joystick${shouldShowJoystickHint ? " is-guiding" : ""}`}
+                aria-label="Move joystick"
+                style={{ "--joystick-hint-ms": `${JOYSTICK_HINT_MS}ms` } as CSSProperties}
+              >
                 <div className="virtual-joystick__knob" />
               </div>
               {shouldShowGameLoadingCover ? (

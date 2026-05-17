@@ -471,7 +471,7 @@ select {
 
 .audio-toggle {
   position: fixed;
-  right: clamp(12px, 2.8vw, 24px);
+  left: clamp(12px, 2.8vw, 24px);
   bottom: clamp(12px, 2.8vw, 24px);
   z-index: 9;
   display: flex;
@@ -1269,8 +1269,24 @@ select {
   transform: translate(-50%, -50%) scale(1);
 }
 
-.virtual-joystick.is-active::before {
+.virtual-joystick.is-active::before,
+.virtual-joystick.is-guiding::before {
   animation: joystick-ripple 760ms ease-out infinite;
+}
+
+.virtual-joystick.is-guiding:not(.is-active) {
+  left: auto;
+  top: auto;
+  right: clamp(22px, 5vw, 52px);
+  bottom: clamp(22px, 5vw, 52px);
+  z-index: 6;
+  opacity: 0;
+  animation: joystick-guide-show var(--joystick-hint-ms, 2300ms) ease-out both;
+  transform: translate(0, 0) scale(0.92);
+}
+
+.virtual-joystick.is-guiding:not(.is-active) .virtual-joystick__knob {
+  animation: joystick-guide-knob var(--joystick-hint-ms, 2300ms) ease-in-out both;
 }
 
 .virtual-joystick__knob {
@@ -1283,6 +1299,44 @@ select {
   background: linear-gradient(145deg, var(--neu-blue-gray-200), var(--neu-bg-inner));
   box-shadow: var(--neu-shadow-outer);
   transform: translate(-50%, -50%);
+}
+
+@keyframes joystick-guide-show {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+
+  16%,
+  70% {
+    opacity: 0.92;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.96);
+  }
+}
+
+@keyframes joystick-guide-knob {
+  0%,
+  18% {
+    transform: translate(-50%, -50%);
+  }
+
+  38% {
+    transform: translate(calc(-50% + 20px), calc(-50% - 18px));
+  }
+
+  56% {
+    transform: translate(calc(-50% - 16px), calc(-50% + 12px));
+  }
+
+  76%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
 }
 
 @keyframes joystick-ripple {
@@ -1481,7 +1535,7 @@ select {
     height: auto;
     padding: 5px;
     gap: 6px;
-    transform: translate(-50%, -50%) rotate(90deg) translate(36dvh, 38dvw);
+    transform: translate(-50%, -50%) rotate(90deg) translate(36dvh, -38dvw);
   }
 
   .audio-toggle__button {
@@ -1723,6 +1777,23 @@ select {
 @media (pointer: coarse) and (orientation: landscape) {
   .virtual-joystick {
     display: block;
+  }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .virtual-joystick.is-guiding:not(.is-active) {
+    left: clamp(18px, 5dvw, 42px);
+    top: auto;
+    right: auto;
+    bottom: clamp(18px, 5dvh, 42px);
+    width: clamp(96px, 18dvh, 126px);
+    height: clamp(96px, 18dvh, 126px);
+  }
+}
+
+@media (pointer: fine) {
+  .virtual-joystick.is-guiding:not(.is-active) {
+    display: none;
   }
 }
 
