@@ -604,12 +604,8 @@ function buildGameEndedPayload(room: Room, winnerRole: PlayerRole | undefined, r
 
 function keepPlayerInsideArena(position: { x: number; y: number }) {
   const limit = ARENA_RADIUS - 0.75;
-  const length = Math.hypot(position.x, position.y);
-
-  if (length > limit) {
-    position.x = (position.x / length) * limit;
-    position.y = (position.y / length) * limit;
-  }
+  position.x = clamp(position.x, -limit, limit);
+  position.y = clamp(position.y, -limit, limit);
 }
 
 function clamp(value: number, min: number, max: number) {

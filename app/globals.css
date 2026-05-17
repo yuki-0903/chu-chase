@@ -1535,7 +1535,7 @@ select {
     height: auto;
     padding: 5px;
     gap: 6px;
-    transform: translate(-50%, -50%) rotate(90deg) translate(36dvh, -38dvw);
+    transform: translate(-50%, -50%) rotate(90deg) translate(-36dvh, 38dvw);
   }
 
   .audio-toggle__button {
