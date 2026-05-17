@@ -43,6 +43,16 @@ export class ThreeInputController {
     this.pressedKeys.delete(event.code);
     this.updateKeyState();
   };
+  private readonly handleTouchGesture = (event: TouchEvent) => {
+    if (!shouldBlockPageGesture()) {
+      return;
+    }
+
+    event.preventDefault();
+  };
+  private readonly handleWebKitGesture = (event: Event) => {
+    event.preventDefault();
+  };
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (this.isJoystickEvent(event)) {
       return;
@@ -107,10 +117,17 @@ export class ThreeInputController {
 
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
+    document.addEventListener("gesturestart", this.handleWebKitGesture);
+    document.addEventListener("gesturechange", this.handleWebKitGesture);
+    document.addEventListener("gestureend", this.handleWebKitGesture);
     target.addEventListener("pointerdown", this.handlePointerDown);
     target.addEventListener("pointermove", this.handlePointerMove);
     target.addEventListener("pointerup", this.handlePointerUp);
     target.addEventListener("pointercancel", this.handlePointerUp);
+    target.addEventListener("touchstart", this.handleTouchGesture, { passive: false });
+    target.addEventListener("touchmove", this.handleTouchGesture, { passive: false });
+    target.addEventListener("touchend", this.handleTouchGesture, { passive: false });
+    target.addEventListener("touchcancel", this.handleTouchGesture, { passive: false });
     this.joystickElement?.addEventListener("pointerdown", this.handleJoystickPointerDown);
     this.joystickElement?.addEventListener("pointermove", this.handleJoystickPointerMove);
     this.joystickElement?.addEventListener("pointerup", this.handleJoystickPointerUp);
@@ -120,10 +137,17 @@ export class ThreeInputController {
   destroy() {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
+    document.removeEventListener("gesturestart", this.handleWebKitGesture);
+    document.removeEventListener("gesturechange", this.handleWebKitGesture);
+    document.removeEventListener("gestureend", this.handleWebKitGesture);
     this.target.removeEventListener("pointerdown", this.handlePointerDown);
     this.target.removeEventListener("pointermove", this.handlePointerMove);
     this.target.removeEventListener("pointerup", this.handlePointerUp);
     this.target.removeEventListener("pointercancel", this.handlePointerUp);
+    this.target.removeEventListener("touchstart", this.handleTouchGesture);
+    this.target.removeEventListener("touchmove", this.handleTouchGesture);
+    this.target.removeEventListener("touchend", this.handleTouchGesture);
+    this.target.removeEventListener("touchcancel", this.handleTouchGesture);
     this.joystickElement?.removeEventListener("pointerdown", this.handleJoystickPointerDown);
     this.joystickElement?.removeEventListener("pointermove", this.handleJoystickPointerMove);
     this.joystickElement?.removeEventListener("pointerup", this.handleJoystickPointerUp);
@@ -242,4 +266,12 @@ function shouldUseFloatingJoystick() {
 
   const isTouchPrimary = window.matchMedia("(pointer: coarse)").matches;
   return isTouchPrimary || navigator.maxTouchPoints > 0;
+}
+
+function shouldBlockPageGesture() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return shouldUseFloatingJoystick() || isForcedLandscapeView();
 }
