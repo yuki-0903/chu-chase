@@ -83,7 +83,19 @@ const MATCH_DURATION_SECONDS = 20;
 const CAPTURE_EFFECT_MS = 900;
 const CHUSER_RELEASE_EFFECT_MS = 620;
 const LIGHTING_DEBUG_STORAGE_KEY = "chu-chase-lighting-debug";
-const MOBILE_LIGHTING_DEBUG_STORAGE_KEY = "chu-chase-lighting-debug-mobile";
+const MOBILE_LIGHTING_DEBUG_STORAGE_KEY = "chu-chase-lighting-debug-mobile-v3";
+const DESKTOP_RENDER_QUALITY = {
+  antialias: true,
+  pixelRatioCap: 2,
+  renderTargetSamples: 4,
+  shadowMapSize: 1024
+} as const;
+const TOUCH_RENDER_QUALITY = {
+  antialias: false,
+  pixelRatioCap: 1,
+  renderTargetSamples: 0,
+  shadowMapSize: 512
+} as const;
 const DEFAULT_LIGHTING_DEBUG: LightingDebugSettings = {
   ambient: 0.36,
   hemi: 2.25,
@@ -108,6 +120,7 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
   const input = new ThreeInputController(parent);
   const { width, height } = getGameSize(parent);
   const initialRenderSize = getRenderSize(width, height);
+  const renderQuality = getRenderQuality();
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(BACKGROUND_COLOR);
@@ -120,14 +133,17 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
   );
   camera.position.set(0, 8.8, 10.8);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({
+    antialias: renderQuality.antialias,
+    powerPreference: isTouchDevice() ? "low-power" : "high-performance"
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, renderQuality.pixelRatioCap));
   renderer.setSize(width, height);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.domElement.classList.add("three-game-renderer--loading");
   parent.appendChild(renderer.domElement);
   const loadingOverlay = createLoadingOverlay();
@@ -139,7 +155,12 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
   const displayQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), displayMaterial);
   displayScene.add(displayQuad);
 
-  let renderTarget = createRenderTarget(initialRenderSize.width, initialRenderSize.height, renderer.getPixelRatio());
+  let renderTarget = createRenderTarget(
+    initialRenderSize.width,
+    initialRenderSize.height,
+    renderer.getPixelRatio(),
+    renderQuality.renderTargetSamples
+  );
   displayMaterial.uniforms.renderTexture.value = renderTarget.texture;
 
   const clock = new THREE.Clock();
@@ -241,7 +262,12 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
     camera.updateProjectionMatrix();
     renderer.setSize(nextSize.width, nextSize.height);
     renderTarget.dispose();
-    renderTarget = createRenderTarget(renderSize.width, renderSize.height, renderer.getPixelRatio());
+    renderTarget = createRenderTarget(
+      renderSize.width,
+      renderSize.height,
+      renderer.getPixelRatio(),
+      renderQuality.renderTargetSamples
+    );
     displayMaterial.uniforms.renderTexture.value = renderTarget.texture;
   });
   resizeObserver.observe(parent);
@@ -564,7 +590,7 @@ function getRenderSize(width: number, height: number) {
   };
 }
 
-function createRenderTarget(width: number, height: number, pixelRatio: number) {
+function createRenderTarget(width: number, height: number, pixelRatio: number, samples: number) {
   const target = new THREE.WebGLRenderTarget(
     Math.max(1, Math.floor(width * pixelRatio)),
     Math.max(1, Math.floor(height * pixelRatio)),
@@ -575,7 +601,7 @@ function createRenderTarget(width: number, height: number, pixelRatio: number) {
       stencilBuffer: false
     }
   );
-  target.samples = 4;
+  target.samples = samples;
   return target;
 }
 
@@ -605,6 +631,7 @@ function createDisplayMaterial() {
 }
 
 function addLights(scene: THREE.Scene, settings: LightingDebugSettings): LightRig {
+  const renderQuality = getRenderQuality();
   const ambient = new THREE.AmbientLight(NEU_COLORS.blueGray200, settings.ambient);
   scene.add(ambient);
   const hemi = new THREE.HemisphereLight(NEU_COLORS.blueGray200, NEU_COLORS.gray300, settings.hemi);
@@ -613,7 +640,8 @@ function addLights(scene: THREE.Scene, settings: LightingDebugSettings): LightRi
   const key = new THREE.DirectionalLight(NEU_COLORS.blueGray200, settings.key);
   key.position.set(-4, 8, 5);
   key.castShadow = settings.shadows;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(renderQuality.shadowMapSize, renderQuality.shadowMapSize);
+  configureStageShadow(key);
   scene.add(key);
 
   const fill = new THREE.DirectionalLight(NEU_COLORS.white, settings.fill);
@@ -623,12 +651,30 @@ function addLights(scene: THREE.Scene, settings: LightingDebugSettings): LightRi
   return { ambient, hemi, key, fill };
 }
 
+function configureStageShadow(light: THREE.DirectionalLight) {
+  const shadowCameraSize = GAME_BALANCE.arenaRadius * 1.55;
+  const shadowCamera = light.shadow.camera;
+  shadowCamera.left = -shadowCameraSize;
+  shadowCamera.right = shadowCameraSize;
+  shadowCamera.top = shadowCameraSize;
+  shadowCamera.bottom = -shadowCameraSize;
+  shadowCamera.near = 0.5;
+  shadowCamera.far = 35;
+  light.shadow.bias = -0.00012;
+  light.shadow.normalBias = 0.018;
+  shadowCamera.updateProjectionMatrix();
+}
+
 function getLightingDebugDefaults(): LightingDebugSettings {
   if (isTouchDevice()) {
     return { ...MOBILE_LIGHTING_DEBUG };
   }
 
   return { ...DEFAULT_LIGHTING_DEBUG };
+}
+
+function getRenderQuality() {
+  return isTouchDevice() ? TOUCH_RENDER_QUALITY : DESKTOP_RENDER_QUALITY;
 }
 
 function getLightingDebugStorageKey() {
