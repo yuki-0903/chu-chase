@@ -7,7 +7,8 @@ import type {
   GameStartPayload,
   PlayerId,
   PlayerInputPayload,
-  PlayerRole
+  PlayerRole,
+  StageVariant
 } from "@/shared/protocol";
 
 const ThreeGame = dynamic(
@@ -32,6 +33,7 @@ interface ThreeCanvasProps {
   selfPlayerId?: PlayerId;
   selfRole?: PlayerRole;
   snapshot?: GameSnapshotPayload | null;
+  stageVariant?: StageVariant;
 }
 
 export function ThreeCanvas({
@@ -44,7 +46,8 @@ export function ThreeCanvas({
   readyIntroSignal,
   selfPlayerId,
   selfRole,
-  snapshot
+  snapshot,
+  stageVariant
 }: ThreeCanvasProps) {
   return (
     <ThreeGame
@@ -58,6 +61,7 @@ export function ThreeCanvas({
       selfPlayerId={selfPlayerId}
       selfRole={selfRole}
       snapshot={snapshot}
+      stageVariant={stageVariant}
     />
   );
 }
