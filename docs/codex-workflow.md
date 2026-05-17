@@ -5,7 +5,7 @@ This project is designed to be developed with Codex in small, reviewable steps.
 ## Core Rules
 
 - Work one GitHub Issue at a time.
-- Create a working branch for each Issue.
+- Create a working branch for each Issue from `develop`.
 - Branch names must use this format:
 
 ```txt
@@ -19,7 +19,7 @@ feature/#12
 ```
 
 - Confirm changes locally with the user before pushing.
-- Do not push or deploy until the user says OK.
+- Do not push to `develop`, merge to `main`, or deploy until the user says OK.
 - Do not add unrequested features.
 - Do not silently change gameplay specs.
 - Ask or propose before making UI/UX changes that affect feel, layout, controls, or presentation.
@@ -29,16 +29,17 @@ feature/#12
 ## Standard Flow
 
 1. Check the target Issue.
-2. Create or switch to the Issue branch.
+2. Create or switch to the Issue branch from `develop`.
 3. Implement only the requested scope.
 4. Run local checks.
 5. Start the local dev server when visual confirmation is needed.
 6. Let the user confirm in the browser.
 7. After user approval, commit.
-8. Merge or push as requested.
-9. Deploy to Vercel / Render only after user approval.
-10. Comment the Issue with a concise summary.
-11. Close the Issue.
+8. Merge the Issue branch into `develop` and push when the user asks to upload the fix.
+9. Keep fixes on `develop` until the user confirms the grouped changes.
+10. Merge `develop` into `main` and deploy to Vercel / Render only after final user approval.
+11. Comment the Issue with a concise summary.
+12. Close the Issue.
 
 ## Local Confirmation
 
@@ -77,11 +78,27 @@ Use this format when closing an Issue:
 * 
 ```
 
+## Branch Flow
+
+Use this branch flow for grouped releases:
+
+```txt
+main
+  └─ develop
+       └─ feature/#<issue-number>
+```
+
+- `main`: production branch.
+- `develop`: staging branch for confirmed Issue fixes before a grouped production release.
+- `feature/#<issue-number>`: focused branch for one Issue.
+
+Each Issue fix should land in `develop` first. When the user confirms the grouped changes are ready, merge `develop` into `main` and push for production deployment.
+
 ## Push / Deploy Rule
 
 Do not push or deploy automatically.
 
-Push and deployment should happen only after the user says something like:
+Push to `develop`, merge to `main`, and deployment should happen only after the user says something like:
 
 - `OK`
 - `pushお願い`
