@@ -23,8 +23,8 @@ runner -> DODGER
 4. Both players enter the ready scene.
 5. Each player presses `TAP READY`.
 6. When both are ready, the match starts.
-7. For the first 5 seconds, only DODGER can move.
-8. After 5 seconds, CHUSER is released.
+7. For the first 6.5 seconds, only DODGER can move.
+8. After 6.5 seconds, CHUSER is released.
 9. The match ends when CHUSER catches DODGER or time runs out.
 10. Players can press `RESTART` for a rematch.
 
@@ -45,10 +45,12 @@ Current values:
   maxPlayersPerRoom: 2,
   serverTickRate: 30,
   matchDurationMs: 60_000,
-  dodgerHeadStartMs: 5_000,
+  dodgerHeadStartMs: 6_500,
   capturesToWin: 1,
-  captureRadius: 1.35,
+  captureRadius: 1.08,
   playerSpeed: 4.8,
+  chuserSpeedMultiplier: 0.94,
+  dodgerSpeedMultiplier: 1,
   playerRadius: 0.75,
   arenaRadius: 12,
   mapWidth: 24,

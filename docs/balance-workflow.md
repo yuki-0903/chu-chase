@@ -73,10 +73,12 @@ game/config/balance.ts
 Current public-facing defaults:
 
 - match duration: 60 seconds
-- DODGER head start: 5 seconds
+- DODGER head start: 6.5 seconds
 - captures to win: 1
 - player speed: 4.8
-- capture radius: 1.35
+- CHUSER speed multiplier: 0.94
+- DODGER speed multiplier: 1.0
+- capture radius: 1.08
 - arena radius: 12
 - room code length: 5 numeric digits
 

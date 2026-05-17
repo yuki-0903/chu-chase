@@ -10,7 +10,9 @@ import {
   MAX_PLAYERS_PER_ROOM,
   PLAYER_SPEED,
   ROOM_CODE_LENGTH,
-  DODGER_HEAD_START_MS
+  DODGER_HEAD_START_MS,
+  CHUSER_SPEED_MULTIPLIER,
+  DODGER_SPEED_MULTIPLIER
 } from "../shared/constants";
 import type {
   ClientToServerEvents,
@@ -457,7 +459,7 @@ function startRoom(room: Room) {
   room.players.forEach((player) => {
     player.input = { x: 0, y: 0 };
     player.velocity = { x: 0, y: 0 };
-    player.position = player.role === "tagger" ? { x: -2.4, y: 0 } : { x: 2.4, y: -0.35 };
+    player.position = player.role === "tagger" ? { x: -4.2, y: 0 } : { x: 4.2, y: -0.35 };
   });
 }
 
@@ -475,7 +477,7 @@ function prepareRoomForRematch(room: Room) {
     player.ready = false;
     player.input = { x: 0, y: 0 };
     player.velocity = { x: 0, y: 0 };
-    player.position = player.role === "tagger" ? { x: -2.4, y: 0 } : { x: 2.4, y: -0.35 };
+    player.position = player.role === "tagger" ? { x: -4.2, y: 0 } : { x: 4.2, y: -0.35 };
   });
 }
 
@@ -512,9 +514,12 @@ function updatePlayingRooms() {
         player.role === "tagger" && Boolean(room.startedAt && now - room.startedAt < DODGER_HEAD_START_MS);
       const input = isTaggerHeadStartLocked ? { x: 0, y: 0 } : player.input;
 
+      const roleSpeedMultiplier =
+        player.role === "tagger" ? CHUSER_SPEED_MULTIPLIER : DODGER_SPEED_MULTIPLIER;
+
       player.velocity = {
-        x: input.x * room.settings.playerSpeed,
-        y: input.y * room.settings.playerSpeed
+        x: input.x * room.settings.playerSpeed * roleSpeedMultiplier,
+        y: input.y * room.settings.playerSpeed * roleSpeedMultiplier
       };
       player.position.x += player.velocity.x * deltaSeconds;
       player.position.y += player.velocity.y * deltaSeconds;
