@@ -21,6 +21,7 @@ import {
   ThreeInputController
 } from "@/game/systems/ThreeInputController";
 import { DODGER_HEAD_START_MS } from "@/shared/constants";
+import { getStageWalls } from "@/shared/stages";
 import type {
   CaptureHappenedPayload,
   GameSnapshotPayload,
@@ -29,6 +30,7 @@ import type {
   PlayerInputPayload,
   PlayerRole,
   PlayerSnapshot,
+  StageVariant,
   Vector2
 } from "@/shared/protocol";
 
@@ -43,6 +45,7 @@ export interface ThreeGameHandle {
   ) => void;
   setSelfRole: (role?: PlayerRole) => void;
   setSnapshot: (snapshot: GameSnapshotPayload, selfPlayerId?: PlayerId) => void;
+  setStageVariant: (stageVariant?: StageVariant) => void;
 }
 
 interface ThreeGameOptions {
@@ -53,6 +56,7 @@ interface ThreeGameOptions {
   onInput?: (payload: PlayerInputPayload) => void;
   selfPlayerId?: PlayerId;
   selfRole?: PlayerRole;
+  stageVariant?: StageVariant;
 }
 
 type GameLoopPhase = "ready" | "playing" | "result";
@@ -172,7 +176,9 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
   const lightRig = addLights(scene, lightingDebug);
   applyLightingDebugSettings(renderer, lightRig, lightingDebug);
   const debugPanel = createLightingDebugPanel(parent, renderer, lightRig, lightingDebug, lightingDefaults);
-  world.add(createTemplateStage());
+  let currentStageVariant = options.stageVariant ?? "plain";
+  let stage = createTemplateStage(currentStageVariant);
+  world.add(stage);
 
   let loadedAvatarCount = 0;
   let didNotifyAssetsReady = false;
@@ -451,6 +457,7 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
       onlineInputSender = onInput ?? onlineInputSender;
       latestSelfPlayerId = selfPlayerId;
       latestSelfRole = getSelfRole(payload.players, selfPlayerId);
+      setStageVariant(payload.stageVariant);
       latestSnapshot = null;
       chuserLockedUntil = payload.startsAt + DODGER_HEAD_START_MS;
       wasChuserLocked = false;
@@ -482,6 +489,10 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
       latestSnapshot = snapshot;
       latestSelfPlayerId = selfPlayerId;
       latestSelfRole = getSelfRole(snapshot.players, selfPlayerId);
+      setStageVariant(snapshot.stageVariant);
+    },
+    setStageVariant: (stageVariant) => {
+      setStageVariant(stageVariant);
     },
     destroy: () => {
       window.cancelAnimationFrame(frameId);
@@ -498,6 +509,19 @@ export function createThreeGame(parent: HTMLElement, options: ThreeGameOptions =
       renderer.dispose();
     }
   };
+
+  function setStageVariant(stageVariant?: StageVariant) {
+    const nextStageVariant = stageVariant ?? "plain";
+    if (nextStageVariant === currentStageVariant) {
+      return;
+    }
+
+    world.remove(stage);
+    disposeObject(stage);
+    currentStageVariant = nextStageVariant;
+    stage = createTemplateStage(currentStageVariant);
+    world.add(stage);
+  }
 }
 
 function updateCamera(
@@ -869,7 +893,7 @@ function createLoadingOverlay() {
   return overlay;
 }
 
-function createTemplateStage() {
+function createTemplateStage(variant: StageVariant = "plain") {
   const group = new THREE.Group();
   const stageSize = (GAME_BALANCE.arenaRadius - 0.75) * 2;
   const roomMaterial = new THREE.MeshStandardMaterial({
@@ -895,7 +919,37 @@ function createTemplateStage() {
   softPlate.receiveShadow = true;
   group.add(softPlate);
 
+  addStageWalls(group, variant);
+
   return group;
+}
+
+function addStageWalls(group: THREE.Group, variant: StageVariant) {
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: NEU_COLORS.bgInner,
+    roughness: 0.82,
+    metalness: 0
+  });
+
+  getStageWalls(variant).forEach((wall) => {
+    const wallMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(wall.width, 1.18, wall.height),
+      wallMaterial.clone()
+    );
+    wallMesh.position.set(wall.x, 0.6, wall.y);
+    wallMesh.castShadow = true;
+    wallMesh.receiveShadow = true;
+    group.add(wallMesh);
+
+    const wallTop = new THREE.Mesh(
+      new THREE.BoxGeometry(wall.width + 0.06, 0.08, wall.height + 0.06),
+      wallMaterial.clone()
+    );
+    wallTop.position.set(wall.x, 1.22, wall.y);
+    wallTop.castShadow = true;
+    wallTop.receiveShadow = true;
+    group.add(wallTop);
+  });
 }
 
 function createTextSprite(text: string, color: number) {

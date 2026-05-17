@@ -2,7 +2,8 @@ export type PlayerId = string;
 export type RoomCode = string;
 
 export type PlayerRole = "tagger" | "runner";
-export type RoomPhase = "waiting" | "ready" | "countdown" | "playing" | "ended";
+export type RoomPhase = "waiting" | "stage-select" | "ready" | "countdown" | "playing" | "ended";
+export type StageVariant = "plain" | "maze";
 export type AwkwardnessLevel = "far" | "medium" | "near" | "danger";
 export type EndReason = "tagger-captured" | "runner-survived" | "room-closed" | "player-left";
 
@@ -26,11 +27,16 @@ export interface JoinRoomPayload {
   nickname?: string;
 }
 
+export interface SelectStagePayload {
+  stageVariant: StageVariant;
+}
+
 export interface RoomCreatedPayload {
   roomCode: RoomCode;
   playerId: PlayerId;
   phase: RoomPhase;
   round: number;
+  stageVariant: StageVariant;
   players: PublicPlayer[];
   settings: MatchSettingsPayload;
 }
@@ -40,6 +46,7 @@ export interface RoomJoinedPayload {
   playerId: PlayerId;
   phase: RoomPhase;
   round: number;
+  stageVariant: StageVariant;
   players: PublicPlayer[];
   settings: MatchSettingsPayload;
 }
@@ -71,6 +78,7 @@ export interface GameSnapshotPayload {
   roomCode: RoomCode;
   phase: RoomPhase;
   round: number;
+  stageVariant: StageVariant;
   remainingMs: number;
   captureCount: number;
   players: PlayerSnapshot[];
@@ -81,6 +89,7 @@ export interface GameStartPayload {
   serverTime: number;
   startsAt: number;
   round: number;
+  stageVariant: StageVariant;
   players: PlayerSnapshot[];
 }
 
@@ -128,6 +137,10 @@ export interface ClientToServerEvents {
   ) => void;
   "room:join": (
     payload: JoinRoomPayload,
+    ack?: (response: RoomJoinedPayload | ServerErrorPayload) => void
+  ) => void;
+  "room:select-stage": (
+    payload: SelectStagePayload,
     ack?: (response: RoomJoinedPayload | ServerErrorPayload) => void
   ) => void;
   "room:leave": (ack?: (response: { ok: true } | ServerErrorPayload) => void) => void;
